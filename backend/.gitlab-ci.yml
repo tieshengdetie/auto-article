@@ -1,0 +1,83 @@
+image: docker:git
+
+stages:
+  - build
+  - deploy
+
+variables:
+  TEST_NAMESPACE: ebag-test
+  TEST_DEPLOYMENT: message-center
+  TEST_CONTTAINER: message-center
+  TEST_CONFIG_ENV: test
+  PROD_NAMESPACE: ebag-prod
+  PROD_DEPLOYMENT: message-center
+  PROD_CONTTAINER: message-center
+  PROD_CONFIG_ENV: prod
+  APP_PORT: 9000
+
+
+build-test:
+  stage: build
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $ALI_REGISTRY_USER -p $ALI_REGISTRY_PASSWORD $ALI_REGISTRY_HOST
+    - docker build --build-arg APP_ROOT=/go/src/${CI_PROJECT_NAME}
+      --build-arg EXPOSE_PORT=${APP_PORT}
+      --build-arg APP_NAME=${CI_PROJECT_NAME}
+      --build-arg ENV_STRING=${TEST_CONFIG_ENV}
+      --build-arg NAMESPACE=${TEST_NAMESPACE}
+      --build-arg POD_NAME=${TEST_DEPLOYMENT}
+      -t $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE:latest -f docker/Dockerfile .
+    - docker push $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - test
+
+deploy_test:
+  stage: deploy
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+  image: registry.gitlab.dreamdev.cn/docker/build/kubectl:v1.14.1
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$TEST_KUBERNETES_CONFIG" > ~/.kube/config
+    - echo "$TEST_KUBERNETES_CA" > ~/.kube/ca.crt
+  script:
+    - kubectl -n $TEST_NAMESPACE set image deployment/$TEST_DEPLOYMENT $TEST_CONTTAINER=$IMAGE_NAME
+  only:
+    - test
+
+build_prod:
+  stage: build
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $ALI_REGISTRY_USER -p $ALI_REGISTRY_PASSWORD $ALI_REGISTRY_HOST
+  script:
+    - docker build --build-arg APP_ROOT=/go/src/${CI_PROJECT_NAME}
+      --build-arg EXPOSE_PORT=${APP_PORT}
+      --build-arg APP_NAME=${CI_PROJECT_NAME}
+      --build-arg ENV_STRING=${PROD_CONFIG_ENV}
+      --build-arg NAMESPACE=${PROD_NAMESPACE}
+      --build-arg POD_NAME=${PROD_DEPLOYMENT}
+      -t ${IMAGE_NAME} -f docker/Dockerfile .
+    - docker push ${IMAGE_NAME}
+  artifacts:
+    expire_in: 1 week
+  only:
+    - tags
+
+deploy_prod:
+  stage: deploy
+  variables:
+    IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  image: registry.gitlab.dreamdev.cn/docker/build/kubectl:v1.14.1
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$PROD_KUBERNETES_CONFIG" > ~/.kube/config
+    - echo "$PROD_KUBERNETES_CA" > ~/.kube/ca.crt
+  script:
+    - kubectl -n $PROD_NAMESPACE set image deployment/$PROD_DEPLOYMENT $PROD_CONTTAINER=${IMAGE_NAME}
+  only:
+    - tags
