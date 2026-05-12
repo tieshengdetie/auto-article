@@ -3,4 +3,5 @@ logs/*
 !logs/.gitkeep
 .idea
 application.local.yml
+application.*.yml
 .gocache/
