@@ -14,15 +14,16 @@ type DataSourceConfig struct {
 
 // ServerConfig 整个项目的配置
 type ServerConfig struct {
-	Port          int               `mapstructure:"port"`
-	Salt          string            `mapstructure:"salt"`
-	Deploy        string            `mapstructure:"deploy"`
-	DataSource    DataSourceConfig  `mapstructure:"datasource"`
-	Kafka         KafkaConfig       `mapstructure:"kafka"`
-	Redis         RedisConfig       `mapstructure:"redis"`
-	AliYunModel   AliYunModelConfig `mapstructure:"aliYunModel"`
-	RabbitMq      RabbitMqConfig    `mapstructure:"rabbitMq"`
-	TianApiConfig TianApiConfig     `mapstructure:"tianApiConfig"`
+	Port            int                   `mapstructure:"port"`
+	Salt            string                `mapstructure:"salt"`
+	Deploy          string                `mapstructure:"deploy"`
+	DataSource      DataSourceConfig      `mapstructure:"datasource"`
+	Kafka           KafkaConfig           `mapstructure:"kafka"`
+	Redis           RedisConfig           `mapstructure:"redis"`
+	AliYunModel     AliYunModelConfig     `mapstructure:"aliYunModel"`
+	VolcengineModel VolcengineModelConfig `mapstructure:"volcengineModel"`
+	RabbitMq        RabbitMqConfig        `mapstructure:"rabbitMq"`
+	TianApiConfig   TianApiConfig         `mapstructure:"tianApiConfig"`
 }
 type RabbitMqConfig struct {
 	Host     string `mapstructure:"host"`
@@ -48,6 +49,11 @@ type RedisConfig struct {
 }
 
 type AliYunModelConfig struct {
+	BaseUrl string `mapstructure:"baseUrl"`
+	AppKey  string `mapstructure:"appKey"`
+}
+
+type VolcengineModelConfig struct {
 	BaseUrl string `mapstructure:"baseUrl"`
 	AppKey  string `mapstructure:"appKey"`
 }

@@ -9,7 +9,23 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/google/uuid"
 )
+
+// 定义一个类型约束，允许使用常见基本类型
+
+type BasicType interface {
+	~int | ~int64 | ~string | ~bool | ~float32 | ~float64
+}
+
+// IfGenerics 泛型函数
+func IfGenerics[T BasicType](condition bool, trueVal, falseVal T) T {
+	if condition {
+		return trueVal
+	}
+	return falseVal
+}
 
 // If 模拟三元运算
 func If(condition bool, trueVal, falseVal interface{}) interface{} {
@@ -18,7 +34,9 @@ func If(condition bool, trueVal, falseVal interface{}) interface{} {
 	}
 	return falseVal
 }
-
+func GenerateUniqueId() string {
+	return uuid.NewString()
+}
 func camelToSnake(s string) string {
 	var result []rune
 	for i, r := range s {

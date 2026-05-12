@@ -46,25 +46,12 @@ func initLogger(logPath, errPath string, logLevel zapcore.Level) (logger *zap.Lo
 			enc.AppendInt64(int64(d) / 1000000)
 		},
 	}
-	//自定义日志级别：自定义Info级别
-	infoLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl < zapcore.WarnLevel && lvl >= logLevel
-	})
 
-	//自定义日志级别：自定义Warn级别
-	warnLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.WarnLevel && lvl >= logLevel
-	})
-
-	// 获取io.Writer的实现
-	infoWriter := getWriter(logPath)
-	warnWriter := getWriter(errPath)
-
-	// 实现多个输出
-	core := zapcore.NewTee(
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(infoWriter), infoLevel),                         //将info及以下写入logPath，NewConsoleEncoder 是非结构化输出
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(warnWriter), warnLevel),                         //warn及以上写入errPath
-		zapcore.NewCore(zapcore.NewJSONEncoder(config), zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), logLevel), //同时将日志输出到控制台，NewJSONEncoder 是结构化输出
+	// 只输出到标准输出
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(config),
+		zapcore.AddSync(os.Stdout),
+		logLevel,
 	)
 	logger = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.WarnLevel))
 	return logger

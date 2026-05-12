@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"net"
 	"strings"
 )
 
@@ -33,4 +35,23 @@ func GetCurrentIP(ctx *gin.Context) string {
 		ip = ctx.Request.RemoteAddr
 	}
 	return ip
+}
+
+func GetServiceIpLocal() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("无法获取本地IP地址")
+}
+
+func GetServiceIp() (string, error) {
+	return GetServiceIpLocal()
 }

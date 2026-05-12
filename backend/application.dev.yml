@@ -41,8 +41,11 @@ redis:
   password: 123456
 # 阿里云千问模型配置
 aliYunModel:
-  baseUrl: https://dashscope.aliyuncs.com/compatible-mode
+  baseUrl: https://dashscope.aliyuncs.com/compatible-mode/v1
   appKey: sk-f1aec03ebc8d416fab8e4122ea56fd39
+volcengineModel:
+  baseUrl: https://ark.cn-beijing.volces.com/api/v3
+  appKey: 3edf6f61-14f2-4381-abab-4969525b97ea
 rabbitMq:
   host: rabbitmq-serverless-cn-lf63srd1e0f.cn-shenzhen.amqp-5.net.mq.amqp.aliyuncs.com
   userName: MjpyYWJiaXRtcS1zZXJ2ZXJsZXNzLWNuLWxmNjNzcmQxZTBmOkxUQUk1dFNYRmpEbmh5MUV3am1qVjk1cg==

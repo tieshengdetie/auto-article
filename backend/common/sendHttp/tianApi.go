@@ -15,11 +15,13 @@ var TianApi = TianApiHttp{}
 type TianApiHttp struct{}
 
 var TianApiHttpUrlMap = urlMap{
-	"nethot":     "/nethot/index",     // 百度热门搜索
-	"weibohot":   "/weibohot/index",   // 微博热门搜索
-	"douyinhot":  "/douyinhot/index",  // 抖音热门搜索
-	"wxhottopic": "/wxhottopic/index", // 微信热门话题
-	"toutiaohot": "/toutiaohot/index", // 今日头条热搜
+	"nethot":      "/nethot/index",      // 百度热门搜索
+	"weibohot":    "/weibohot/index",    // 微博热门搜索
+	"douyinhot":   "/douyinhot/index",   // 抖音热门搜索
+	"wxhottopic":  "/wxhottopic/index",  // 微信热门话题
+	"toutiaohot":  "/toutiaohot/index",  // 今日头条热搜
+	"allnews":     "/allnews/index",     // 指定分类新闻
+	"generalnews": "/generalnews/index", // 综合新闻
 }
 
 func init() {

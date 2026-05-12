@@ -41,7 +41,7 @@ func HandleRequest(requestType int, targetUrl string, param map[string]interface
 		}
 		q := req.URL.Query()
 		for k, v := range param {
-			q.Add(k, v.(string))
+			q.Add(k, fmt.Sprint(v))
 		}
 		req.URL.RawQuery = q.Encode()
 	case PostForm:
@@ -114,11 +114,10 @@ func HandleRequest(requestType int, targetUrl string, param map[string]interface
 func HTTPRequest(ctx context.Context, requestType int, targetUrl string, param map[string]interface{}, header map[string]string, files map[string]io.Reader) (content []byte, err error) {
 	var resp *http.Response
 	resp, err = HandleRequest(requestType, targetUrl, param, header, files)
-
-	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	var body []byte
 	body, err = io.ReadAll(resp.Body)
 
@@ -137,6 +136,7 @@ func HTTPRequestByReceiver(requestType int, targetUrl string, param map[string]i
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	return json.NewDecoder(resp.Body).Decode(&receiver)
 }

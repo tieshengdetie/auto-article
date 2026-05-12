@@ -20,5 +20,6 @@ func Routers() *gin.Engine {
 	// 注册路由
 	router.InitHotSearchRouter(ApiGroup) // 热搜接口
 	router.InitNewsRouter(ApiGroup)      // 新闻接口
+	router.InitContentRouter(ApiGroup)   // 内容创作接口
 	return Router
 }

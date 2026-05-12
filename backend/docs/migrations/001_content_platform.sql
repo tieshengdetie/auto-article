@@ -1,0 +1,61 @@
+CREATE TABLE IF NOT EXISTS `collected_news` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `unique_key` varchar(64) NOT NULL,
+  `keyword` varchar(128) NOT NULL DEFAULT '',
+  `search_type` varchar(32) NOT NULL DEFAULT '',
+  `channel_id` int NOT NULL DEFAULT 0,
+  `channel_name` varchar(64) NOT NULL DEFAULT '',
+  `third_party_id` varchar(128) NOT NULL DEFAULT '',
+  `url` varchar(1024) NOT NULL DEFAULT '',
+  `ctime` varchar(64) NOT NULL DEFAULT '',
+  `title` varchar(512) NOT NULL DEFAULT '',
+  `pic_url` varchar(1024) NOT NULL DEFAULT '',
+  `source` varchar(128) NOT NULL DEFAULT '',
+  `description` text,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_collected_news_unique_key` (`unique_key`),
+  KEY `idx_collected_news_keyword` (`keyword`),
+  KEY `idx_collected_news_search_type` (`search_type`),
+  KEY `idx_collected_news_channel_id` (`channel_id`),
+  KEY `idx_collected_news_third_party_id` (`third_party_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `generated_articles` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `keyword` varchar(128) NOT NULL DEFAULT '',
+  `title` varchar(512) NOT NULL DEFAULT '',
+  `summary` text,
+  `markdown_content` longtext,
+  `html_preview` longtext,
+  `tags` varchar(512) NOT NULL DEFAULT '',
+  `cover_image_url` varchar(1024) NOT NULL DEFAULT '',
+  `image_status` varchar(32) NOT NULL DEFAULT 'missing',
+  `model_name` varchar(64) NOT NULL DEFAULT '',
+  `source_news_ids` text,
+  `status` varchar(32) NOT NULL DEFAULT 'draft',
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_generated_articles_keyword` (`keyword`),
+  KEY `idx_generated_articles_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `publish_packages` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `article_id` bigint unsigned NOT NULL DEFAULT 0,
+  `platform` varchar(32) NOT NULL DEFAULT '',
+  `title` varchar(512) NOT NULL DEFAULT '',
+  `markdown_content` longtext,
+  `cover_image_url` varchar(1024) NOT NULL DEFAULT '',
+  `source_news_ids` text,
+  `status` varchar(32) NOT NULL DEFAULT '',
+  `remark` text,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_publish_packages_article_id` (`article_id`),
+  KEY `idx_publish_packages_platform` (`platform`),
+  KEY `idx_publish_packages_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
