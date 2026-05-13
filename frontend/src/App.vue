@@ -9,7 +9,7 @@ const platforms = [
   { type: 'toutiaohot', name: '头条', accent: '#d71920' }
 ]
 
-const activePlatform = ref(platforms[0])
+const activePlatform = ref(null)
 const hotSearch = ref([])
 const hotLoading = ref(false)
 const activeKeyword = ref('')
@@ -31,11 +31,27 @@ const articles = ref([])
 const articlePage = ref(1)
 const articlePageSize = ref(6)
 const articleTotal = ref(0)
+const articleListMode = ref('native')
+const skillPlatformFilter = ref('')
+const skillArticles = ref([])
+const skillArticlePage = ref(1)
+const skillArticlePageSize = ref(6)
+const skillArticleTotal = ref(0)
 const activeArticle = ref(null)
+const activeArticleType = ref('native')
 const editorTextArea = ref(null)
+const localImageInput = ref(null)
 const publishPackage = ref(null)
 const notice = ref('')
 const error = ref('')
+
+const skillPlatforms = [
+  { value: '', label: '全部平台' },
+  { value: 'toutiao', label: '今日头条' },
+  { value: 'baijiahao', label: '百家号' },
+  { value: 'xiaohongshu', label: '小红书' },
+  { value: 'zhihu', label: '知乎' }
+]
 
 const selectedChannel = computed(() => {
   return channels.value.find((item) => item.channelId === Number(selectedChannelId.value))
@@ -44,6 +60,16 @@ const selectedChannel = computed(() => {
 const selectedSearchNews = computed(() => {
   const selected = new Set(selectedSearchNewsKeys.value)
   return newsList.value.filter((item, index) => selected.has(newsKey(item, index)))
+})
+
+const activeMarkdown = computed(() => activeArticle.value?.markdownContent || '')
+
+const previewHasHeading = computed(() => {
+  return /^#\s+/m.test(activeMarkdown.value)
+})
+
+const previewHasImage = computed(() => {
+  return /!\[[^\]]*\]\([^)]+\)/.test(activeMarkdown.value)
 })
 
 async function request(path, options = {}) {
@@ -63,7 +89,8 @@ async function loadChannels() {
   channels.value = await request('/news/channels')
 }
 
-async function loadHot(platform = activePlatform.value) {
+async function loadHot(platform) {
+  if (!platform) return
   activePlatform.value = platform
   hotLoading.value = true
   try {
@@ -162,6 +189,7 @@ async function generateArticle() {
       })
     })
     activeArticle.value = article
+    activeArticleType.value = 'native'
     await loadArticles()
     notice.value = '文章草稿已生成'
   } catch (err) {
@@ -191,6 +219,29 @@ async function loadArticles() {
 
 async function openArticle(article) {
   activeArticle.value = await request(`/content/articles/${article.id}`)
+  activeArticleType.value = 'native'
+  publishPackage.value = null
+}
+
+async function loadSkillArticles() {
+  const params = new URLSearchParams({
+    page: String(skillArticlePage.value),
+    pageSize: String(skillArticlePageSize.value)
+  })
+  if (activeKeyword.value) {
+    params.set('keyword', activeKeyword.value)
+  }
+  if (skillPlatformFilter.value) {
+    params.set('platform', skillPlatformFilter.value)
+  }
+  const data = await request(`/skill-articles?${params.toString()}`)
+  skillArticles.value = data.list || []
+  skillArticleTotal.value = data.total || 0
+}
+
+async function openSkillArticle(article) {
+  activeArticle.value = await request(`/skill-articles/${article.id}`)
+  activeArticleType.value = 'skill'
   publishPackage.value = null
 }
 
@@ -201,11 +252,18 @@ function closeArticle() {
 
 async function saveArticle() {
   if (!activeArticle.value) return
-  activeArticle.value = await request(`/content/articles/${activeArticle.value.id}`, {
+  const path = activeArticleType.value === 'skill'
+    ? `/skill-articles/${activeArticle.value.id}`
+    : `/content/articles/${activeArticle.value.id}`
+  activeArticle.value = await request(path, {
     method: 'PUT',
     body: JSON.stringify(activeArticle.value)
   })
-  await loadArticles()
+  if (activeArticleType.value === 'skill') {
+    await loadSkillArticles()
+  } else {
+    await loadArticles()
+  }
   notice.value = '文章已保存'
 }
 
@@ -219,12 +277,46 @@ function changeArticlePage(delta) {
 
 async function createPublishPackage() {
   if (!activeArticle.value) return
-  publishPackage.value = await request(`/content/articles/${activeArticle.value.id}/publish-package`, {
+  const path = activeArticleType.value === 'skill'
+    ? `/skill-articles/${activeArticle.value.id}/publish-package`
+    : `/content/articles/${activeArticle.value.id}/publish-package`
+  publishPackage.value = await request(path, {
     method: 'POST'
   })
   activeArticle.value = publishPackage.value.article
-  await loadArticles()
+  if (activeArticleType.value === 'skill') {
+    await loadSkillArticles()
+  } else {
+    await loadArticles()
+  }
   notice.value = '待发布包已生成'
+}
+
+function changeSkillArticlePage(delta) {
+  const nextPage = skillArticlePage.value + delta
+  const maxPage = Math.max(1, Math.ceil(skillArticleTotal.value / skillArticlePageSize.value))
+  if (nextPage < 1 || nextPage > maxPage) return
+  skillArticlePage.value = nextPage
+  loadSkillArticles()
+}
+
+function switchArticleMode(mode) {
+  articleListMode.value = mode
+  if (mode === 'skill') {
+    loadSkillArticles()
+  } else {
+    loadArticles()
+  }
+}
+
+function changeSkillPlatform() {
+  skillArticlePage.value = 1
+  loadSkillArticles()
+}
+
+function platformLabel(value) {
+  const platform = skillPlatforms.find((item) => item.value === value)
+  return platform ? platform.label : value || '未知平台'
 }
 
 function toggleNews(id) {
@@ -254,9 +346,28 @@ function insertMarkdown(before, after = '') {
 }
 
 function insertImage() {
-  const url = window.prompt('图片地址')
+  insertRemoteImage()
+}
+
+function insertRemoteImage() {
+  const url = window.prompt('远程图片地址')
   if (!url) return
-  insertMarkdown(`\n![图片说明](${url})\n`, '')
+  insertMarkdown(`\n![图片说明](${normalizeAssetUrl(url)})\n`, '')
+}
+
+function chooseLocalImage() {
+  localImageInput.value?.click()
+}
+
+function insertLocalImage(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    insertMarkdown(`\n![${file.name}](${reader.result})\n`, '')
+    event.target.value = ''
+  }
+  reader.readAsDataURL(file)
 }
 
 function applyHeading(level) {
@@ -305,7 +416,7 @@ function previewMarkdown(text = '') {
         '"': '&quot;',
         "'": '&#039;'
       })[char])
-      safe = safe.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
+      safe = safe.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => `<img src="${normalizeAssetUrl(src)}" alt="${alt}" />`)
       safe = safe.replace(/&lt;span style=&quot;font-size:(\d+)px&quot;&gt;(.+?)&lt;\/span&gt;/g, '<span style="font-size:$1px">$2</span>')
       if (safe.startsWith('### ')) return `<h3>${safe.slice(4)}</h3>`
       if (safe.startsWith('## ')) return `<h2>${safe.slice(3)}</h2>`
@@ -315,11 +426,19 @@ function previewMarkdown(text = '') {
     .join('')
 }
 
+function normalizeAssetUrl(url = '') {
+  const trimmed = String(url).trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('data:') || /^https?:\/\//i.test(trimmed)) return trimmed
+  if (trimmed.startsWith('/static/')) return trimmed
+  return trimmed
+}
+
 onMounted(async () => {
   try {
     await loadChannels()
-    await loadHot()
     await loadArticles()
+    await loadSkillArticles()
   } catch (err) {
     error.value = err.message
   }
@@ -339,41 +458,45 @@ onMounted(async () => {
       </div>
     </header>
 
-    <section class="control-strip" aria-label="平台热搜">
-      <button
-        v-for="platform in platforms"
-        :key="platform.type"
-        class="platform-button"
-        :class="{ active: activePlatform.type === platform.type }"
-        :style="{ '--accent': platform.accent }"
-        @click="loadHot(platform)"
-      >
-        <span>{{ platform.name }}</span>
-        <small>{{ platform.type }}</small>
-      </button>
-    </section>
-
-    <section class="grid">
+    <section class="workspace-grid">
       <aside class="panel hot-panel">
         <div class="panel-head">
-          <h2>{{ activePlatform.name }}热搜</h2>
-          <span>{{ hotLoading ? '加载中' : `${hotSearch.length} 条` }}</span>
+          <h2>热搜选题</h2>
+          <span>{{ hotLoading ? '加载中' : activePlatform ? `${hotSearch.length} 条` : '请选择平台' }}</span>
         </div>
-        <div class="hot-list">
-          <article v-for="item in hotSearch" :key="item.word || item.keyword" class="hot-item">
-            <div>
-              <strong>{{ item.word || item.keyword || item.hotWord }}</strong>
-              <div class="brief-wrap">
-                <p class="hot-brief">
-                  {{ item.brief || item.hotTag || `热度 ${item.hotIndex || item.index || item.hotWordNum || '-'}` }}
-                </p>
-                <div class="brief-popover">
-                  {{ item.brief || item.hotTag || `热度 ${item.hotIndex || item.index || item.hotWordNum || '-'}` }}
+        <section class="control-strip" aria-label="平台热搜">
+          <button
+            v-for="platform in platforms"
+            :key="platform.type"
+            class="platform-button"
+            :class="{ active: activePlatform && activePlatform.type === platform.type }"
+            :style="{ '--accent': platform.accent }"
+            @click="loadHot(platform)"
+          >
+            <span>{{ platform.name }}</span>
+            <small>{{ platform.type }}</small>
+          </button>
+        </section>
+        <div class="hot-scroll">
+          <div class="hot-list">
+            <div v-if="!activePlatform && hotSearch.length === 0" class="empty-state">
+              选择一个平台后加载热搜数据
+            </div>
+            <article v-for="item in hotSearch" :key="item.word || item.keyword" class="hot-item">
+              <div>
+                <strong>{{ item.word || item.keyword || item.hotWord }}</strong>
+                <div class="brief-wrap">
+                  <p class="hot-brief">
+                    {{ item.brief || item.hotTag || `热度 ${item.hotIndex || item.index || item.hotWordNum || '-'}` }}
+                  </p>
+                  <div class="brief-popover">
+                    {{ item.brief || item.hotTag || `热度 ${item.hotIndex || item.index || item.hotWordNum || '-'}` }}
+                  </div>
                 </div>
               </div>
-            </div>
-            <button @click="useHotKeyword(item.word || item.keyword || item.hotWord)">去检索文章</button>
-          </article>
+              <button @click="useHotKeyword(item.word || item.keyword || item.hotWord)">去检索文章</button>
+            </article>
+          </div>
         </div>
       </aside>
 
@@ -436,56 +559,113 @@ onMounted(async () => {
             </div>
           </article>
         </div>
+
+        <details class="native-generator">
+          <summary>
+            <span>文章生成</span>
+            <small>{{ selectedNewsIds.length }} 条素材</small>
+          </summary>
+          <div class="saved-list">
+            <label v-for="item in savedNews" :key="item.id" class="saved-item">
+              <input type="checkbox" :checked="selectedNewsIds.includes(item.id)" @change="toggleNews(item.id)" />
+              <span>{{ item.title }}</span>
+            </label>
+          </div>
+          <div class="model-row">
+            <select v-model="llmProvider" aria-label="模型提供商">
+              <option value="qwen">千问</option>
+              <option value="doubao">豆包</option>
+            </select>
+            <input v-model="modelName" aria-label="模型名称" placeholder="模型名可选，不填走默认" />
+          </div>
+          <label class="prompt-box">
+            <span>用户提示词</span>
+            <textarea
+              v-model="userPrompt"
+              placeholder="例如：偏财经视角，文章要有强观点，适合头条号中年读者阅读。"
+              aria-label="用户提示词"
+            ></textarea>
+          </label>
+          <button class="primary-action" :disabled="selectedNewsIds.length === 0 || generating" @click="generateArticle">
+            {{ generating ? '生成中...' : '生成新文章' }}
+          </button>
+        </details>
       </section>
 
       <section class="panel article-panel">
         <div class="panel-head">
-          <h2>文章生成</h2>
-          <span>{{ selectedNewsIds.length }} 条素材</span>
+          <h2>文章中心</h2>
+          <span>{{ articleListMode === 'skill' ? `${skillArticleTotal} 篇 Skill文章` : `${articleTotal} 篇大模型文章` }}</span>
         </div>
-        <div class="saved-list">
-          <label v-for="item in savedNews" :key="item.id" class="saved-item">
-            <input type="checkbox" :checked="selectedNewsIds.includes(item.id)" @change="toggleNews(item.id)" />
-            <span>{{ item.title }}</span>
-          </label>
-        </div>
-        <div class="model-row">
-          <select v-model="llmProvider" aria-label="模型提供商">
-            <option value="qwen">千问</option>
-            <option value="doubao">豆包</option>
-          </select>
-          <input v-model="modelName" aria-label="模型名称" placeholder="模型名可选，不填走默认" />
-        </div>
-        <label class="prompt-box">
-          <span>用户提示词</span>
-          <textarea
-            v-model="userPrompt"
-            placeholder="例如：偏财经视角，文章要有强观点，适合头条号中年读者阅读。"
-            aria-label="用户提示词"
-          ></textarea>
-        </label>
-        <button class="primary-action" :disabled="selectedNewsIds.length === 0 || generating" @click="generateArticle">
-          {{ generating ? '生成中...' : '生成新文章' }}
-        </button>
 
         <div class="article-history">
-          <article v-for="article in articles" :key="article.id" class="article-card" @click="openArticle(article)">
-            <div>
-              <strong>{{ article.title || article.keyword }}</strong>
-              <p>{{ article.summary || '暂无摘要' }}</p>
-            </div>
-            <footer>
-              <span>{{ article.keyword }}</span>
-              <span>{{ article.modelName }}</span>
-              <span>{{ article.status }}</span>
-              <time>{{ formatDate(article.createdAt) }}</time>
-            </footer>
-          </article>
-          <div class="article-pager">
-            <button :disabled="articlePage <= 1" @click="changeArticlePage(-1)">上一页</button>
-            <span>{{ articlePage }} / {{ Math.max(1, Math.ceil(articleTotal / articlePageSize)) }} · {{ articleTotal }} 篇</span>
-            <button :disabled="articlePage >= Math.ceil(articleTotal / articlePageSize)" @click="changeArticlePage(1)">下一页</button>
+          <div class="article-switcher">
+            <button :class="{ active: articleListMode === 'native' }" @click="switchArticleMode('native')">
+              大模型文章
+            </button>
+            <button :class="{ active: articleListMode === 'skill' }" @click="switchArticleMode('skill')">
+              Skill文章
+            </button>
           </div>
+
+          <div v-if="articleListMode === 'skill'" class="skill-filter">
+            <select v-model="skillPlatformFilter" aria-label="Skill文章平台" @change="changeSkillPlatform">
+              <option v-for="platform in skillPlatforms" :key="platform.value" :value="platform.value">
+                {{ platform.label }}
+              </option>
+            </select>
+          </div>
+
+          <template v-if="articleListMode === 'native'">
+            <article v-for="article in articles" :key="article.id" class="article-card" @click="openArticle(article)">
+              <div>
+                <strong>{{ article.title || article.keyword }}</strong>
+                <p>{{ article.summary || '暂无摘要' }}</p>
+              </div>
+              <footer>
+                <span>{{ article.keyword }}</span>
+                <span>{{ article.modelName }}</span>
+                <span>{{ article.status }}</span>
+                <time>{{ formatDate(article.createdAt) }}</time>
+              </footer>
+            </article>
+            <div class="article-pager">
+              <button :disabled="articlePage <= 1" @click="changeArticlePage(-1)">上一页</button>
+              <span>{{ articlePage }} / {{ Math.max(1, Math.ceil(articleTotal / articlePageSize)) }} · {{ articleTotal }} 篇</span>
+              <button :disabled="articlePage >= Math.ceil(articleTotal / articlePageSize)" @click="changeArticlePage(1)">下一页</button>
+            </div>
+          </template>
+
+          <template v-else>
+            <article
+              v-for="article in skillArticles"
+              :key="article.id"
+              class="article-card skill-card"
+              @click="openSkillArticle(article)"
+            >
+              <div>
+                <strong>{{ article.title || article.keyword }}</strong>
+                <p>{{ article.summary || '暂无摘要' }}</p>
+              </div>
+              <footer>
+                <span>{{ platformLabel(article.platform) }}</span>
+                <span>{{ article.keyword }}</span>
+                <span>{{ article.humanizeStatus }}</span>
+                <span>{{ article.publishStatus }}</span>
+                <time>{{ formatDate(article.createdAt) }}</time>
+              </footer>
+            </article>
+            <div class="article-pager">
+              <button :disabled="skillArticlePage <= 1" @click="changeSkillArticlePage(-1)">上一页</button>
+              <span>{{ skillArticlePage }} / {{ Math.max(1, Math.ceil(skillArticleTotal / skillArticlePageSize)) }} · {{ skillArticleTotal }} 篇</span>
+              <button
+                :disabled="skillArticlePage >= Math.ceil(skillArticleTotal / skillArticlePageSize)"
+                @click="changeSkillArticlePage(1)"
+              >
+                下一页
+              </button>
+            </div>
+          </template>
         </div>
       </section>
     </section>
@@ -496,28 +676,31 @@ onMounted(async () => {
         <button @click="saveArticle">保存编辑</button>
         <button @click="createPublishPackage">生成待发布包</button>
         <button @click="closeArticle">关闭预览</button>
+        <textarea v-model="activeArticle.summary" aria-label="文章摘要" placeholder="文章摘要"></textarea>
       </div>
       <div class="markdown-toolbar">
         <button @click="applyHeading(1)">H1</button>
         <button @click="applyHeading(2)">H2</button>
         <button @click="applyHeading(3)">H3</button>
-        <button @click="insertImage">插入图片</button>
+        <button @click="insertRemoteImage">远程图片</button>
+        <button @click="chooseLocalImage">本地图片</button>
         <button @click="applyFontSize(16)">16px</button>
         <button @click="applyFontSize(20)">20px</button>
         <button @click="applyFontSize(24)">24px</button>
+        <input ref="localImageInput" class="hidden-file" type="file" accept="image/*" @change="insertLocalImage" />
       </div>
       <div class="editor-grid">
         <textarea ref="editorTextArea" v-model="activeArticle.markdownContent" aria-label="Markdown 正文"></textarea>
         <article class="preview">
-          <img v-if="activeArticle.coverImageUrl" :src="activeArticle.coverImageUrl" alt="" />
-          <h1>{{ activeArticle.title }}</h1>
+          <img v-if="activeArticle.coverImageUrl && !previewHasImage" :src="normalizeAssetUrl(activeArticle.coverImageUrl)" alt="" />
+          <h1 v-if="!previewHasHeading">{{ activeArticle.title }}</h1>
           <p class="summary">{{ activeArticle.summary }}</p>
           <div v-html="previewMarkdown(activeArticle.markdownContent)"></div>
         </article>
       </div>
       <div v-if="publishPackage" class="publish-box">
-        <strong>头条号待发布包</strong>
-        <span>{{ publishPackage.package.remark }}</span>
+        <strong>{{ activeArticleType === 'skill' ? 'Skill待发布数据' : '头条号待发布包' }}</strong>
+        <span>{{ activeArticleType === 'skill' ? '已写入 publishPayload，可供后续一键发布流程使用。' : publishPackage.package.remark }}</span>
       </div>
     </section>
   </main>

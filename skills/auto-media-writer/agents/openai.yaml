@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auto Media Writer"
+  short_description: "Platform article writing tool"
+  default_prompt: "Use this skill to research a topic, write a humanized platform-specific self-media article, prepare images, and save it to auto-article."
