@@ -5,3 +5,9 @@ logs/*
 application.local.yml
 application.*.yml
 .gocache/
+
+# 忽略后端静态资源生成/缓存文件
+# 说明：先递归忽略 static 下所有内容，再“放行”目录以便能跟踪到 .gitkeep
+static/**
+!static/**/
+!static/**/.gitkeep

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">
-  <rect width="1000" height="560" fill="#f6f1e8"/>
-  <rect x="90" y="86" width="820" height="388" rx="24" fill="#202020"/>
-  <circle cx="235" cy="178" r="46" fill="#d7aa5f"/>
-  <rect x="305" y="150" width="405" height="24" fill="#f6f1e8" opacity="0.86"/>
-  <rect x="305" y="197" width="310" height="20" fill="#f6f1e8" opacity="0.55"/>
-  <path d="M190 385 C310 288 410 288 536 350 C650 407 760 377 852 288" fill="none" stroke="#d7aa5f" stroke-width="8"/>
-  <text x="135" y="510" fill="#4b3328" font-size="28" font-family="Microsoft YaHei, sans-serif" font-weight="700">一段模糊视频，把旧关系推回聚光灯下</text>
-</svg>
