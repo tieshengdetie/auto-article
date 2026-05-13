@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import sys
+from datetime import datetime
 from html import unescape
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -41,25 +42,27 @@ def extract_image_urls(article_url: str, html: str) -> list[str]:
     return urls
 
 
-def local_public_path(static_root: Path, public_prefix: str, task_id: str, filename: str) -> str:
+def local_public_path(static_root: Path, public_prefix: str, relative_dir: Path, filename: str) -> str:
     try:
-        rel = static_root.joinpath(task_id, filename).relative_to(static_root)
+        rel = static_root.joinpath(relative_dir, filename).relative_to(static_root)
         return "/" + public_prefix.strip("/") + "/" + rel.as_posix()
     except ValueError:
-        return "/" + public_prefix.strip("/") + "/" + task_id + "/" + filename
+        return "/" + public_prefix.strip("/") + "/" + relative_dir.as_posix() + "/" + filename
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--article-url", action="append", required=True)
     parser.add_argument("--task-id", required=True)
-    parser.add_argument("--static-root", default="backend/static/article-images")
-    parser.add_argument("--public-prefix", default="/static/article-images")
+    parser.add_argument("--static-root", default="backend/static/article-images/uploads")
+    parser.add_argument("--public-prefix", default="/static/article-images/uploads")
     parser.add_argument("--max-images", type=int, default=4)
     args = parser.parse_args()
 
     static_root = Path(args.static_root)
-    target_dir = static_root / args.task_id
+    now = datetime.now()
+    relative_dir = Path(now.strftime("%Y")) / now.strftime("%m") / args.task_id
+    target_dir = static_root / relative_dir
     target_dir.mkdir(parents=True, exist_ok=True)
 
     downloaded = []
@@ -85,10 +88,11 @@ def main() -> int:
             name = hashlib.sha1(image_url.encode("utf-8")).hexdigest()[:16] + ext
             output = target_dir / name
             output.write_bytes(data)
+            public_path = local_public_path(static_root, args.public_prefix, relative_dir, name)
             downloaded.append({
                 "role": "inline" if downloaded else "cover",
-                "url": local_public_path(static_root, args.public_prefix, args.task_id, name),
-                "localUrl": local_public_path(static_root, args.public_prefix, args.task_id, name),
+                "url": public_path,
+                "localUrl": public_path,
                 "type": "downloaded",
                 "sourceUrl": article_url,
                 "originalUrl": image_url,

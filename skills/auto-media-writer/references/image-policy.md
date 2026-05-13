@@ -12,11 +12,11 @@
 
 Store downloaded or generated images under:
 
-`backend/static/article-images/<yyyy>/<mm>/<task-id>/`
+`backend/static/article-images/uploads/<yyyy>/<mm>/<task-id>/`
 
 Expose them through:
 
-`/static/article-images/<yyyy>/<mm>/<task-id>/<filename>`
+`/static/article-images/uploads/<yyyy>/<mm>/<task-id>/<filename>`
 
 The saved article should use public paths or absolute backend URLs that can be rendered by the frontend and reused by future publish jobs.
 
@@ -27,8 +27,8 @@ python scripts/download_article_images.py \
   --article-url "https://example.com/news-a" \
   --article-url "https://example.com/news-b" \
   --task-id "<task-id>" \
-  --static-root "backend/static/article-images" \
-  --public-prefix "/static/article-images"
+  --static-root "backend/static/article-images/uploads" \
+  --public-prefix "/static/article-images/uploads"
 ```
 
 The script prints an `images` JSON array. Review results and remove unrelated recommendation images before saving.
@@ -47,8 +47,8 @@ Record each image in the `images` JSON field:
 ```json
 {
   "role": "cover",
-  "url": "/static/article-images/2026/05/task/image.jpg",
-  "localUrl": "/static/article-images/2026/05/task/image.jpg",
+  "url": "/static/article-images/uploads/2026/05/task/image.jpg",
+  "localUrl": "/static/article-images/uploads/2026/05/task/image.jpg",
   "type": "downloaded",
   "sourceUrl": "https://example.com/news",
   "copyrightRisk": "low",

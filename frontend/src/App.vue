@@ -345,6 +345,24 @@ function insertMarkdown(before, after = '') {
   })
 }
 
+function insertMarkdownSnippet(snippet) {
+  if (!activeArticle.value) return
+  const target = editorTextArea.value
+  const content = activeArticle.value.markdownContent || ''
+  if (!target) {
+    activeArticle.value.markdownContent = `${content}${snippet}`
+    return
+  }
+  const start = target.selectionStart
+  const end = target.selectionEnd
+  activeArticle.value.markdownContent = `${content.slice(0, start)}${snippet}${content.slice(end)}`
+  requestAnimationFrame(() => {
+    target.focus()
+    const cursor = start + snippet.length
+    target.setSelectionRange(cursor, cursor)
+  })
+}
+
 function insertImage() {
   insertRemoteImage()
 }
@@ -352,22 +370,31 @@ function insertImage() {
 function insertRemoteImage() {
   const url = window.prompt('远程图片地址')
   if (!url) return
-  insertMarkdown(`\n![图片说明](${normalizeAssetUrl(url)})\n`, '')
+  insertMarkdownSnippet(`\n![图片说明](${normalizeAssetUrl(url)})\n`)
 }
 
 function chooseLocalImage() {
   localImageInput.value?.click()
 }
 
-function insertLocalImage(event) {
+async function insertLocalImage(event) {
   const file = event.target.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    insertMarkdown(`\n![${file.name}](${reader.result})\n`, '')
+  const formData = new FormData()
+  formData.append('image', file)
+  try {
+    const data = await request('/skill-articles/upload-image', {
+      method: 'POST',
+      headers: {},
+      body: formData
+    })
+    insertMarkdownSnippet(`\n![${file.name}](${data.url})\n`)
+    notice.value = '本地图片已上传并插入正文'
+  } catch (err) {
+    error.value = err.message
+  } finally {
     event.target.value = ''
   }
-  reader.readAsDataURL(file)
 }
 
 function applyHeading(level) {

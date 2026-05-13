@@ -33,7 +33,7 @@ Recommended fields:
   "summary": "100字以内摘要",
   "markdownContent": "Markdown正文",
   "tags": "[\"标签1\", \"标签2\"]",
-  "coverImageUrl": "/static/article-images/2026/05/task/cover.jpg",
+  "coverImageUrl": "/static/article-images/uploads/2026/05/task/cover.jpg",
   "coverImageType": "ai_generated",
   "images": "[]",
   "sources": "[]",
@@ -66,6 +66,22 @@ All JSON-like fields are stored as strings for portability. Encode arrays/object
 `PUT /api/v1/skill-articles/:id`
 
 Use this for manual edits, image changes, or re-humanized content.
+
+## Upload Local Article Image
+
+`POST /api/v1/skill-articles/upload-image`
+
+Use multipart form data with an `image` file field. The backend saves the image under `backend/static/article-images/uploads/yyyy/mm/` and returns a public static path:
+
+```json
+{
+  "url": "/static/article-images/uploads/2026/05/example.jpg",
+  "filename": "example.jpg",
+  "size": 123456
+}
+```
+
+Insert the returned `url` into Markdown instead of embedding base64 data.
 
 ## Prepare Publish Data
 

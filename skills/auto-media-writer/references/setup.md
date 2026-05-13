@@ -85,7 +85,7 @@ The backend must expose:
 - `POST /api/v1/skill-articles`
 - `GET /api/v1/skill-articles`
 - `POST /api/v1/skill-articles/:id/publish-package`
-- `/static/article-images/...`
+- `/static/article-images/uploads/...`
 
 ## Quick Test
 
