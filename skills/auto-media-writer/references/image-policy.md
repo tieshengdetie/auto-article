@@ -3,10 +3,11 @@
 ## Decision Order
 
 1. When a related source article exists, inspect the article page for images that appear in or near the article body.
-2. Download relevant article images to the backend static directory and reference the local static URL in Markdown. Prefer local copies over hotlinking so future publishing is stable.
-3. Skip images that are unrelated, watermarked, obvious thumbnails from unrelated recommendations, tracking pixels, logos, avatars, QR codes, or too small for article use.
-4. Generate AI images only when no safe relevant article image can be found, the source image is broken, or copyright/watermark risk is obvious.
-5. Never use empty SVG placeholder graphics as generated article images. AI fallback images should be raster assets (`.png`, `.jpg`, or `.webp`) with concrete visual content.
+2. If source articles contain body images, download them to the backend uploads directory and reference the local static URL in Markdown. Prefer local copies over hotlinking so future publishing is stable.
+3. Do not omit images merely because they may need manual review. If an image is imperfect but usable, still download and insert it, then mark review concerns in the `images` metadata.
+4. Skip only images that are clearly not article material: tracking pixels, logos, avatars, QR codes, blank placeholders, broken files, obvious unrelated recommendations, or files too small for article use.
+5. Generate AI images only when no source image exists or no source image can be downloaded.
+6. Never use empty SVG placeholder graphics as generated article images. AI fallback images should be raster assets (`.png`, `.jpg`, or `.webp`) with concrete visual content.
 
 ## Storage
 
@@ -18,7 +19,7 @@ Expose them through:
 
 `/static/article-images/uploads/<yyyy>/<mm>/<task-id>/<filename>`
 
-The saved article should use public paths or absolute backend URLs that can be rendered by the frontend and reused by future publish jobs.
+The saved article must use public paths or absolute backend URLs that can be rendered by the frontend and reused by future publish jobs.
 
 Use `scripts/download_article_images.py` when possible:
 
@@ -31,14 +32,16 @@ python scripts/download_article_images.py \
   --public-prefix "/static/article-images/uploads"
 ```
 
-The script prints an `images` JSON array. Review results and remove unrelated recommendation images before saving.
+The script prints an `images` JSON array. Use those local URLs in the article Markdown. Review results and remove only clearly unrelated recommendation images before saving.
 
 ## Required Images
 
 - Cover: exactly 1 preferred image.
 - Inline: 2-3 images by default.
 - Insert inline images after natural section breaks, not inside the opening paragraph.
-- If source images are available, at least the cover should come from a downloaded source image unless there is a watermark/copyright problem.
+- If source images are available, at least the cover should come from a downloaded source image.
+- If downloaded images have uncertain fit, set `needsReview: true` in metadata and keep them in the draft for the user's audit.
+- If no source image is available, generate AI raster images instead. The final saved article must never be image-free.
 
 ## Image Metadata
 
@@ -53,6 +56,7 @@ Record each image in the `images` JSON field:
   "sourceUrl": "https://example.com/news",
   "copyrightRisk": "low",
   "watermark": false,
+  "needsReview": false,
   "status": "ready"
 }
 ```

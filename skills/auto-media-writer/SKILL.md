@@ -5,6 +5,12 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 
 # Auto Media Writer
 
+## Iron Rules
+
+- Never save an article to the auto-article backend before calling `humanizer-zh`. The de-AI pass is mandatory, not optional. If `humanizer-zh` is unavailable, stop before database insertion and tell the user to install or enable it.
+- Never save an article without images. If cited source articles contain body images, download those images to `backend/static/article-images/uploads/<yyyy>/<mm>/<task-id>/`, insert their local `/static/article-images/uploads/...` URLs into the Markdown, and record them in the `images` field. If an image later looks unsuitable, the user will review and replace it manually; do not omit images for that reason.
+- If no source image can be downloaded, generate concrete raster fallback images (`png`, `jpg`, or `webp`) for the cover and inline positions. Never use SVG placeholders.
+
 ## Core Workflow
 
 1. Resolve the target platform. Require one of `toutiao`, `baijiahao`, `xiaohongshu`, or `zhihu`; ask the user only if it is missing or ambiguous.
@@ -14,7 +20,7 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 5. Build a source pack containing title, URL, source, publish time, summary, image URL, and reliability notes. Do not invent facts, quotes, data, or dates absent from sources.
 6. Draft the article for the selected platform using `references/platform-style.md`.
 7. Humanize the article before saving by calling the `humanizer-zh` skill. Pass the drafted Markdown article plus the selected platform, category, target length, title options, and source-fact constraints. Require `humanizer-zh` to preserve verified facts, URLs, dates, names, Markdown headings, image markers, and legal risk boundaries while removing AI-sounding transitions, template paragraphs, generic moralizing, and over-balanced phrasing.
-8. Prepare images using `references/image-policy.md`. When source articles contain relevant body images, download them to the local static image directory and reference those local URLs. Insert Markdown image tags at suitable positions.
+8. Prepare images using `references/image-policy.md`. When source articles contain body images, download them to the local uploads image directory and reference those local URLs. Insert Markdown image tags at suitable positions. Do not save an image-free article.
 9. Create a publish-ready payload using `references/auto-article-api.md`. Validate payload shape with `scripts/validate_skill_article_payload.py` when possible.
 10. Save directly to the auto-article backend `POST /api/v1/skill-articles`. Do not write the database directly.
 11. Record any improvement learned during use in this skill before future runs when the user asks the skill to evolve.
@@ -52,13 +58,13 @@ Always generate:
 - `styleProfile` JSON
 - `publishPayload` JSON for future one-click publishing
 
-Use `humanizeStatus: "done"` only after the `humanizer-zh` rewrite pass is complete. If `humanizer-zh` is unavailable, stop before saving and tell the user to install it instead of silently skipping the de-AI pass. Use `promptVersion` and `skillVersion` so future changes are traceable.
+Use `humanizeStatus: "done"` only after the `humanizer-zh` rewrite pass is complete. If `humanizer-zh` is unavailable, stop before saving and tell the user to install it instead of silently skipping the de-AI pass. Never send `POST /api/v1/skill-articles` with `humanizeStatus` unset, `pending`, or `skipped`. Use `promptVersion` and `skillVersion` so future changes are traceable.
 
 ## Image Handling
 
 Follow `references/image-policy.md`.
 
-Default output requires one cover image and 2-3 inline images. Prefer downloaded local copies of relevant source-article images. If no safe source image exists, generate concrete raster AI images (`png`, `jpg`, or `webp`), not SVG placeholders. If a source image has watermark or copyright risk, generate AI images instead.
+Default output requires one cover image and 2-3 inline images. Prefer downloaded local copies of source-article images. If source images are imperfect but usable, still download and insert them, mark review concerns in `images`, and let the user replace them later. If no source image exists or no image can be downloaded, generate concrete raster AI images (`png`, `jpg`, or `webp`), not SVG placeholders.
 
 ## Saving
 

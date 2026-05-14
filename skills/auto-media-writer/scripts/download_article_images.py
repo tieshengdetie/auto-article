@@ -98,6 +98,7 @@ def main() -> int:
                 "originalUrl": image_url,
                 "copyrightRisk": "unknown",
                 "watermark": False,
+                "needsReview": False,
                 "status": "ready",
             })
 

@@ -41,6 +41,7 @@ const activeArticle = ref(null)
 const activeArticleType = ref('native')
 const editorTextArea = ref(null)
 const localImageInput = ref(null)
+const previewArticle = ref(null)
 const publishPackage = ref(null)
 const notice = ref('')
 const error = ref('')
@@ -71,6 +72,34 @@ const previewHasHeading = computed(() => {
 const previewHasImage = computed(() => {
   return /!\[[^\]]*\]\([^)]+\)/.test(activeMarkdown.value)
 })
+
+const articleTitleOptions = computed(() => {
+  if (!activeArticle.value?.titleOptions) return []
+  const value = activeArticle.value.titleOptions
+  if (Array.isArray(value)) return normalizeTitleOptions(value)
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? normalizeTitleOptions(parsed) : []
+  } catch {
+    return String(value)
+      .split(/\n|,|，/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+})
+
+function normalizeTitleOptions(options) {
+  return options
+    .map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') {
+        return item.title || item.text || item.name || item.value || ''
+      }
+      return ''
+    })
+    .map((item) => String(item).trim())
+    .filter(Boolean)
+}
 
 async function request(path, options = {}) {
   error.value = ''
@@ -405,6 +434,41 @@ function applyFontSize(size) {
   insertMarkdown(`<span style="font-size:${size}px">`, '</span>')
 }
 
+function selectTitleCandidate(event) {
+  if (!activeArticle.value) return
+  const title = event.target.value
+  if (title) {
+    activeArticle.value.title = title
+  }
+  event.target.value = ''
+}
+
+async function copyText(text, successMessage) {
+  const normalized = String(text || '').trim()
+  if (!normalized) return
+  try {
+    await navigator.clipboard.writeText(normalized)
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = normalized
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
+  notice.value = successMessage
+}
+
+function copyRenderedMarkdown() {
+  copyText(previewArticle.value?.innerText || '', '渲染内容已复制')
+}
+
+function copyMarkdownSource() {
+  copyText(activeArticle.value?.markdownContent || '', 'Markdown源码已复制')
+}
+
 function formatDate(value) {
   if (!value) return '-'
   return new Date(value).toLocaleString()
@@ -432,25 +496,129 @@ function clearSearchNewsSelection() {
 }
 
 function previewMarkdown(text = '') {
-  return text
-    .split('\n')
-    .filter((line) => line.trim())
-    .map((line) => {
-      let safe = line.replace(/[&<>"']/g, (char) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      })[char])
-      safe = safe.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => `<img src="${normalizeAssetUrl(src)}" alt="${alt}" />`)
-      safe = safe.replace(/&lt;span style=&quot;font-size:(\d+)px&quot;&gt;(.+?)&lt;\/span&gt;/g, '<span style="font-size:$1px">$2</span>')
-      if (safe.startsWith('### ')) return `<h3>${safe.slice(4)}</h3>`
-      if (safe.startsWith('## ')) return `<h2>${safe.slice(3)}</h2>`
-      if (safe.startsWith('# ')) return `<h1>${safe.slice(2)}</h1>`
-      return `<p>${safe}</p>`
-    })
-    .join('')
+  const lines = String(text || '').split('\n')
+  const html = []
+  let listType = ''
+  let inCodeBlock = false
+  let codeLines = []
+
+  const closeList = () => {
+    if (!listType) return
+    html.push(`</${listType}>`)
+    listType = ''
+  }
+
+  const openList = (type) => {
+    if (listType === type) return
+    closeList()
+    listType = type
+    html.push(`<${type}>`)
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+
+    if (inCodeBlock) {
+      if (/^```/.test(line)) {
+        html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`)
+        inCodeBlock = false
+        codeLines = []
+      } else {
+        codeLines.push(rawLine)
+      }
+      continue
+    }
+
+    if (!line) {
+      closeList()
+      continue
+    }
+
+    if (/^```/.test(line)) {
+      closeList()
+      inCodeBlock = true
+      codeLines = []
+      continue
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
+    if (heading) {
+      closeList()
+      const level = heading[1].length
+      html.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`)
+      continue
+    }
+
+    if (/^(-{3,}|\*{3,})$/.test(line)) {
+      closeList()
+      html.push('<hr />')
+      continue
+    }
+
+    const ordered = line.match(/^\d+\.\s+(.+)$/)
+    if (ordered) {
+      openList('ol')
+      html.push(`<li>${renderInlineMarkdown(ordered[1])}</li>`)
+      continue
+    }
+
+    const unordered = line.match(/^[-*+]\s+(.+)$/)
+    if (unordered) {
+      openList('ul')
+      html.push(`<li>${renderInlineMarkdown(unordered[1])}</li>`)
+      continue
+    }
+
+    const quote = line.match(/^>\s?(.+)$/)
+    if (quote) {
+      closeList()
+      html.push(`<blockquote>${renderInlineMarkdown(quote[1])}</blockquote>`)
+      continue
+    }
+
+    closeList()
+    html.push(`<p>${renderInlineMarkdown(line)}</p>`)
+  }
+
+  closeList()
+  if (inCodeBlock) {
+    html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`)
+  }
+  return html.join('')
+}
+
+function renderInlineMarkdown(text = '') {
+  let html = escapeHtml(text)
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt, src) => {
+    const normalizedSrc = normalizeAssetUrl(src.replace(/&amp;/g, '&'))
+    return `<img src="${escapeHtmlAttribute(normalizedSrc)}" alt="${escapeHtmlAttribute(alt)}" />`
+  })
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g, (_match, label, href) => {
+    const normalizedHref = normalizeAssetUrl(href.replace(/&amp;/g, '&'))
+    return `<a href="${escapeHtmlAttribute(normalizedHref)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+  })
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+  html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
+  html = html.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>')
+  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+  html = html.replace(/&lt;span style=&quot;font-size:(\d+)px&quot;&gt;(.+?)&lt;\/span&gt;/g, '<span style="font-size:$1px">$2</span>')
+  return html
+}
+
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  })[char])
+}
+
+function escapeHtmlAttribute(value = '') {
+  return escapeHtml(value).replace(/`/g, '&#096;')
 }
 
 function normalizeAssetUrl(url = '') {
@@ -699,7 +867,20 @@ onMounted(async () => {
 
     <section v-if="activeArticle" class="editor-band">
       <div class="editor-tools">
-        <input v-model="activeArticle.title" aria-label="文章标题" />
+        <div class="title-combo">
+          <input v-model="activeArticle.title" aria-label="文章标题" placeholder="文章标题" />
+          <select
+            v-if="articleTitleOptions.length"
+            aria-label="选择候选标题"
+            value=""
+            @change="selectTitleCandidate($event)"
+          >
+            <option value="" disabled>候选标题</option>
+            <option v-for="title in articleTitleOptions" :key="title" :value="title">
+              {{ title }}
+            </option>
+          </select>
+        </div>
         <button @click="saveArticle">保存编辑</button>
         <button @click="createPublishPackage">生成待发布包</button>
         <button @click="closeArticle">关闭预览</button>
@@ -711,6 +892,7 @@ onMounted(async () => {
         <button @click="applyHeading(3)">H3</button>
         <button @click="insertRemoteImage">远程图片</button>
         <button @click="chooseLocalImage">本地图片</button>
+        <button @click="copyMarkdownSource">复制Markdown</button>
         <button @click="applyFontSize(16)">16px</button>
         <button @click="applyFontSize(20)">20px</button>
         <button @click="applyFontSize(24)">24px</button>
@@ -718,12 +900,18 @@ onMounted(async () => {
       </div>
       <div class="editor-grid">
         <textarea ref="editorTextArea" v-model="activeArticle.markdownContent" aria-label="Markdown 正文"></textarea>
-        <article class="preview">
-          <img v-if="activeArticle.coverImageUrl && !previewHasImage" :src="normalizeAssetUrl(activeArticle.coverImageUrl)" alt="" />
-          <h1 v-if="!previewHasHeading">{{ activeArticle.title }}</h1>
-          <p class="summary">{{ activeArticle.summary }}</p>
-          <div v-html="previewMarkdown(activeArticle.markdownContent)"></div>
-        </article>
+        <div class="preview-shell">
+          <div class="preview-head">
+            <span>渲染预览</span>
+            <button @click="copyRenderedMarkdown">一键复制</button>
+          </div>
+          <article ref="previewArticle" class="preview">
+            <img v-if="activeArticle.coverImageUrl && !previewHasImage" :src="normalizeAssetUrl(activeArticle.coverImageUrl)" alt="" />
+            <h1 v-if="!previewHasHeading">{{ activeArticle.title }}</h1>
+            <p class="summary">{{ activeArticle.summary }}</p>
+            <div v-html="previewMarkdown(activeArticle.markdownContent)"></div>
+          </article>
+        </div>
       </div>
       <div v-if="publishPackage" class="publish-box">
         <strong>{{ activeArticleType === 'skill' ? 'Skill待发布数据' : '头条号待发布包' }}</strong>
