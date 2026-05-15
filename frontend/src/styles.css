@@ -813,16 +813,17 @@ h3 {
 }
 
 .preview img {
-  width: 100%;
-  max-height: 250px;
-  object-fit: cover;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
 }
 
 .preview p img {
-  display: block;
-  max-height: 320px;
+  max-height: none;
 }
 
 .preview h1 {
@@ -910,17 +911,6 @@ h3 {
 .summary {
   color: var(--accent-dark);
   font-weight: 650;
-}
-
-.publish-box {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 12px;
-  border: 1px solid #c8e2d8;
-  border-radius: 8px;
-  background: #eef8f3;
-  padding: 12px;
 }
 
 @media (max-width: 1180px) {

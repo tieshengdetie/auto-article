@@ -8,8 +8,3 @@ type SkillArticlePageResp struct {
 	Page     int                           `json:"page"`
 	PageSize int                           `json:"pageSize"`
 }
-
-type SkillPublishPackageResp struct {
-	Article model.SkillGeneratedArticle `json:"article"`
-	Payload string                      `json:"payload"`
-}

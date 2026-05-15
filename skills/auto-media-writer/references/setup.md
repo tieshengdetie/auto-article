@@ -74,17 +74,18 @@ Tool names may be prefixed by the MCP server namespace in some agents.
 
 ## Auto Article Backend
 
-Set the backend URL for saving generated articles:
+Set the backend URL for saving generated articles. Use the actual deployed backend origin; localhost is only for local development:
 
 ```bash
-AUTO_ARTICLE_BASE_URL=http://localhost:9001
+AUTO_ARTICLE_BASE_URL=https://api.example.com
+# Local development only:
+# AUTO_ARTICLE_BASE_URL=http://localhost:9001
 ```
 
 The backend must expose:
 
 - `POST /api/v1/skill-articles`
 - `GET /api/v1/skill-articles`
-- `POST /api/v1/skill-articles/:id/publish-package`
 - `/static/article-images/uploads/...`
 
 ## Quick Test

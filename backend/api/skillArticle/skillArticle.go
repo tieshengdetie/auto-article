@@ -83,19 +83,6 @@ func (s *SkillArticle) HandleUpdate(ctx *gin.Context) {
 	utils.Success(ctx, resp)
 }
 
-func (s *SkillArticle) HandleCreatePublishPackage(ctx *gin.Context) {
-	id, ok := parseSkillArticleID(ctx)
-	if !ok {
-		return
-	}
-	resp, err := s.skillArticleService.CreatePublishPackage(ctx.Request.Context(), id)
-	if err != nil {
-		utils.Err(ctx, 500, err.Error())
-		return
-	}
-	utils.Success(ctx, resp)
-}
-
 func (s *SkillArticle) HandleUploadImage(ctx *gin.Context) {
 	file, err := ctx.FormFile("image")
 	if err != nil {

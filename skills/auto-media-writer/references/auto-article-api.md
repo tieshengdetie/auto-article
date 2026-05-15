@@ -2,9 +2,13 @@
 
 ## Backend Base URL
 
-Read the backend base URL from the user, current workspace config, or an environment variable such as `AUTO_ARTICLE_BASE_URL`. Default local development URL is usually:
+Read the backend base URL from the user, current workspace config, or an environment variable such as `AUTO_ARTICLE_BASE_URL`. Do not assume the backend is deployed locally. For a deployed service, set the real origin, for example:
 
-`http://localhost:9001`
+`AUTO_ARTICLE_BASE_URL=https://api.example.com`
+
+Local development fallback is usually:
+
+`AUTO_ARTICLE_BASE_URL=http://localhost:9001`
 
 Never connect to MySQL directly from this skill.
 
@@ -12,12 +16,17 @@ Never connect to MySQL directly from this skill.
 
 `POST /api/v1/skill-articles`
 
-Required fields:
+Required fields for the backend:
 
 - `platform`: `toutiao`, `baijiahao`, `xiaohongshu`, or `zhihu`
 - `keyword`
 - `title`
 - `markdownContent`
+
+Required fields for this skill before saving:
+
+- `coverImageUrl`: must point to a real downloaded/uploaded raster image under `/static/article-images/uploads/...`
+- at least one Markdown image in `markdownContent`
 
 Recommended fields:
 
@@ -26,32 +35,40 @@ Recommended fields:
   "taskId": "uuid-or-stable-id",
   "platform": "toutiao",
   "keyword": "热点关键词",
-  "keywordSegments": "[\"热点\", \"关键词\"]",
   "category": "society",
   "title": "最终标题",
   "titleOptions": "[\"标题1\", \"标题2\"]",
   "summary": "100字以内摘要",
   "markdownContent": "Markdown正文",
-  "tags": "[\"标签1\", \"标签2\"]",
-  "coverImageUrl": "/static/article-images/uploads/2026/05/task/cover.jpg",
-  "coverImageType": "ai_generated",
-  "images": "[]",
-  "sources": "[]",
-  "hotTopics": "[]",
-  "styleProfile": "{}",
-  "wordCount": 1800,
-  "modelProvider": "openai",
-  "modelName": "model-name",
-  "promptVersion": "auto-media-writer-article-v1",
-  "skillVersion": "auto-media-writer-v1",
-  "humanizeStatus": "done",
-  "status": "draft",
-  "publishStatus": "unpublished",
-  "publishPayload": "{}"
+  "coverImageUrl": "/static/article-images/uploads/2026/05/task/cover.jpg"
 }
 ```
 
-All JSON-like fields are stored as strings for portability. Encode arrays/objects with valid JSON.
+The backend stores only the generated article fields needed by the web page. Keep source packs, style profiles, model metadata, humanizer status, and publishing state in working notes instead of sending them to the API.
+
+## Fast Save Command
+
+Prefer the bundled save script instead of writing new code or inspecting backend files:
+
+```sh
+python scripts/save_skill_article.py payload.json
+```
+
+Set the backend explicitly when it is not local:
+
+```sh
+python scripts/save_skill_article.py payload.json --base-url https://api.example.com
+```
+
+The script validates with `scripts/validate_skill_article_payload.py` before sending `POST /api/v1/skill-articles`. Validation checks required article fields, `titleOptions` JSON encoding, and local image file existence for `coverImageUrl` and Markdown image URLs. Use `--dry-run` to validate and preview the target URL without saving.
+
+When running outside the repository root, pass the uploads directory explicitly:
+
+```sh
+python scripts/save_skill_article.py payload.json --static-root backend/static/article-images/uploads
+```
+
+Do not connect to MySQL, read DAO/model/service code, or write a one-off Python database insertion script for article saving.
 
 ## List Skill Articles
 
@@ -82,9 +99,3 @@ Use multipart form data with an `image` file field. The backend saves the image 
 ```
 
 Insert the returned `url` into Markdown instead of embedding base64 data.
-
-## Prepare Publish Data
-
-`POST /api/v1/skill-articles/:id/publish-package`
-
-This does not publish to any platform. It marks the article as `ready_to_publish`, sets `publishStatus` to `ready`, and writes a `publishPayload` JSON string for future one-click publishing.

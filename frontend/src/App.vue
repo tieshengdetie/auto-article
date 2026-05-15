@@ -42,9 +42,15 @@ const activeArticleType = ref('native')
 const editorTextArea = ref(null)
 const localImageInput = ref(null)
 const previewArticle = ref(null)
-const publishPackage = ref(null)
+const lastEditorSelection = ref({ start: 0, end: 0 })
+const pasteUploading = ref(false)
 const notice = ref('')
 const error = ref('')
+
+const runtimeBackendBaseUrl = typeof window !== 'undefined'
+  ? window.__AUTO_ARTICLE_BACKEND_BASE_URL__
+  : ''
+const backendBaseUrl = normalizeBackendBaseUrl(import.meta.env.VITE_BACKEND_BASE_URL || runtimeBackendBaseUrl || '')
 
 const skillPlatforms = [
   { value: '', label: '全部平台' },
@@ -103,7 +109,7 @@ function normalizeTitleOptions(options) {
 
 async function request(path, options = {}) {
   error.value = ''
-  const res = await fetch(`/api/v1${path}`, {
+  const res = await fetch(apiUrl(`/api/v1${path}`), {
     headers: { 'Content-Type': 'application/json' },
     ...options
   })
@@ -145,7 +151,6 @@ async function searchNews(keyword) {
   selectedSearchNewsKeys.value = []
   savedNews.value = []
   selectedNewsIds.value = []
-  publishPackage.value = null
   try {
     const payload = searchMode.value === 'channel'
       ? {
@@ -249,7 +254,6 @@ async function loadArticles() {
 async function openArticle(article) {
   activeArticle.value = await request(`/content/articles/${article.id}`)
   activeArticleType.value = 'native'
-  publishPackage.value = null
 }
 
 async function loadSkillArticles() {
@@ -271,12 +275,10 @@ async function loadSkillArticles() {
 async function openSkillArticle(article) {
   activeArticle.value = await request(`/skill-articles/${article.id}`)
   activeArticleType.value = 'skill'
-  publishPackage.value = null
 }
 
 function closeArticle() {
   activeArticle.value = null
-  publishPackage.value = null
 }
 
 async function saveArticle() {
@@ -302,23 +304,6 @@ function changeArticlePage(delta) {
   if (nextPage < 1 || nextPage > maxPage) return
   articlePage.value = nextPage
   loadArticles()
-}
-
-async function createPublishPackage() {
-  if (!activeArticle.value) return
-  const path = activeArticleType.value === 'skill'
-    ? `/skill-articles/${activeArticle.value.id}/publish-package`
-    : `/content/articles/${activeArticle.value.id}/publish-package`
-  publishPackage.value = await request(path, {
-    method: 'POST'
-  })
-  activeArticle.value = publishPackage.value.article
-  if (activeArticleType.value === 'skill') {
-    await loadSkillArticles()
-  } else {
-    await loadArticles()
-  }
-  notice.value = '待发布包已生成'
 }
 
 function changeSkillArticlePage(delta) {
@@ -382,13 +367,15 @@ function insertMarkdownSnippet(snippet) {
     activeArticle.value.markdownContent = `${content}${snippet}`
     return
   }
-  const start = target.selectionStart
-  const end = target.selectionEnd
+  const hasFocus = document.activeElement === target
+  const start = hasFocus ? target.selectionStart : lastEditorSelection.value.start
+  const end = hasFocus ? target.selectionEnd : lastEditorSelection.value.end
   activeArticle.value.markdownContent = `${content.slice(0, start)}${snippet}${content.slice(end)}`
   requestAnimationFrame(() => {
     target.focus()
     const cursor = start + snippet.length
     target.setSelectionRange(cursor, cursor)
+    rememberEditorSelection()
   })
 }
 
@@ -409,6 +396,11 @@ function chooseLocalImage() {
 async function insertLocalImage(event) {
   const file = event.target.files?.[0]
   if (!file) return
+  await uploadAndInsertImage(file, '本地图片已上传并插入正文')
+  event.target.value = ''
+}
+
+async function uploadAndInsertImage(file, successMessage = '图片已上传并插入正文') {
   const formData = new FormData()
   formData.append('image', file)
   try {
@@ -418,11 +410,39 @@ async function insertLocalImage(event) {
       body: formData
     })
     insertMarkdownSnippet(`\n![${file.name}](${data.url})\n`)
-    notice.value = '本地图片已上传并插入正文'
+    notice.value = successMessage
   } catch (err) {
     error.value = err.message
+  }
+}
+
+async function handleEditorPaste(event) {
+  if (!activeArticle.value || pasteUploading.value) return
+  const files = Array.from(event.clipboardData?.files || [])
+  const itemFiles = Array.from(event.clipboardData?.items || [])
+    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .filter(Boolean)
+  const image = [...files, ...itemFiles].find((file) => file.type.startsWith('image/'))
+  if (!image) return
+  event.preventDefault()
+  pasteUploading.value = true
+  const ext = image.type.split('/')[1] || 'png'
+  const name = image.name || `pasted-image-${Date.now()}.${ext === 'jpeg' ? 'jpg' : ext}`
+  const file = new File([image], name, { type: image.type })
+  try {
+    await uploadAndInsertImage(file, '剪贴板图片已插入正文')
   } finally {
-    event.target.value = ''
+    pasteUploading.value = false
+  }
+}
+
+function rememberEditorSelection() {
+  const target = editorTextArea.value
+  if (!target) return
+  lastEditorSelection.value = {
+    start: target.selectionStart,
+    end: target.selectionEnd
   }
 }
 
@@ -625,8 +645,17 @@ function normalizeAssetUrl(url = '') {
   const trimmed = String(url).trim()
   if (!trimmed) return ''
   if (trimmed.startsWith('data:') || /^https?:\/\//i.test(trimmed)) return trimmed
-  if (trimmed.startsWith('/static/')) return trimmed
+  if (trimmed.startsWith('/static/')) return apiUrl(trimmed)
   return trimmed
+}
+
+function normalizeBackendBaseUrl(url = '') {
+  return String(url).trim().replace(/\/+$/, '')
+}
+
+function apiUrl(path = '') {
+  if (!backendBaseUrl) return path
+  return `${backendBaseUrl}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 onMounted(async () => {
@@ -845,8 +874,6 @@ onMounted(async () => {
               <footer>
                 <span>{{ platformLabel(article.platform) }}</span>
                 <span>{{ article.keyword }}</span>
-                <span>{{ article.humanizeStatus }}</span>
-                <span>{{ article.publishStatus }}</span>
                 <time>{{ formatDate(article.createdAt) }}</time>
               </footer>
             </article>
@@ -882,7 +909,6 @@ onMounted(async () => {
           </select>
         </div>
         <button @click="saveArticle">保存编辑</button>
-        <button @click="createPublishPackage">生成待发布包</button>
         <button @click="closeArticle">关闭预览</button>
         <textarea v-model="activeArticle.summary" aria-label="文章摘要" placeholder="文章摘要"></textarea>
       </div>
@@ -899,8 +925,16 @@ onMounted(async () => {
         <input ref="localImageInput" class="hidden-file" type="file" accept="image/*" @change="insertLocalImage" />
       </div>
       <div class="editor-grid">
-        <textarea ref="editorTextArea" v-model="activeArticle.markdownContent" aria-label="Markdown 正文"></textarea>
-        <div class="preview-shell">
+        <textarea
+          ref="editorTextArea"
+          v-model="activeArticle.markdownContent"
+          aria-label="Markdown 正文"
+          @click="rememberEditorSelection"
+          @keyup="rememberEditorSelection"
+          @select="rememberEditorSelection"
+          @paste="handleEditorPaste"
+        ></textarea>
+        <div class="preview-shell" tabindex="0" @paste="handleEditorPaste">
           <div class="preview-head">
             <span>渲染预览</span>
             <button @click="copyRenderedMarkdown">一键复制</button>
@@ -912,10 +946,6 @@ onMounted(async () => {
             <div v-html="previewMarkdown(activeArticle.markdownContent)"></div>
           </article>
         </div>
-      </div>
-      <div v-if="publishPackage" class="publish-box">
-        <strong>{{ activeArticleType === 'skill' ? 'Skill待发布数据' : '头条号待发布包' }}</strong>
-        <span>{{ activeArticleType === 'skill' ? '已写入 publishPayload，可供后续一键发布流程使用。' : publishPackage.package.remark }}</span>
       </div>
     </section>
   </main>

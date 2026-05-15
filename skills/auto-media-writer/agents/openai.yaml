@@ -1,4 +1,4 @@
 interface:
   display_name: "Auto Media Writer"
-  short_description: "Platform article writing tool"
-  default_prompt: "Use this skill to research a topic, write a humanized platform-specific self-media article, prepare images, and save it to auto-article."
+  short_description: "Compact research, images, platform articles, and fixed API saving"
+  default_prompt: "Use this skill to segment keywords, research compact latest internet and TianAPI facts, prepare local images, apply platform style, humanize with humanizer-zh, and validate/save a minimal article record through the fixed auto-article HTTP API path."
