@@ -70,6 +70,18 @@ When the user asks for article ideas, daily topic planning, or says they do not 
 - Xiaohongshu prioritizes native note rhythm, short paragraphs, personal observation, practical takeaways, and tags.
 - Zhihu prioritizes a clear judgment or question, structured reasoning, causes, tradeoffs, uncertainty, and conclusion.
 
+### Proven Toutiao Natural Commentary Pattern
+
+Use this pattern for Toutiao society, creator-economy, consumer, and broad-interest hotspot commentary when the topic supports a human judgment rather than a dry explainer.
+
+- Open fast with a concrete sentence that names the core event and emotion in plain words; avoid slow background setup.
+- Use only a few verified facts: time, person/entity, public action, cited source, and one or two concrete details. Do not pile up source summaries.
+- Let the article sound like a real editor thinking aloud: short paragraphs, direct judgments, and everyday phrases such as `真实情况常常反过来` or `这不是敬业，是损耗` when supported by the facts.
+- Build the body as event -> phenomenon -> ordinary-reader relevance -> author judgment -> comment question. Keep headings clear, but avoid classroom structures such as `第一、第二、第三` unless the user asks for a checklist.
+- Keep emotion restrained but present. Do not sensationalize illness, private life, tragedy, or unverified motives; move the point toward ordinary people, work rhythm, consumption decisions, or public responsibility.
+- End with a discussion question close to the reader's situation instead of a grand slogan.
+- Before saving, run an explicit de-AI rewrite pass that removes template transitions, numbered lecture structure, over-balanced phrasing, generic moralizing, and stiff summary paragraphs.
+
 ## Style Profile Notes
 
 Keep a compact style profile in working notes and pass it to `humanizer-zh`. Do not save it to the backend unless the user explicitly asks for auditing metadata. The profile should include:
@@ -102,6 +114,18 @@ Only save after the `humanizer-zh` rewrite pass is complete. If `humanizer-zh` i
 Follow `references/image-policy.md`.
 
 Default output requires one cover image and 1-2 inline images. Prefer downloaded local copies of source-article images. If source images are imperfect but usable, still download and insert them, and let the user replace them later. If source images are missing or fail to download, search the internet for images that match the article keywords and select editorially relevant results before using AI generation. Generate concrete raster AI images (`png`, `jpg`, or `webp`) only when both earlier paths fail, never SVG placeholders.
+
+### Proven Toutiao Hotspot Image Pattern
+
+Use this pattern for Toutiao hotspot commentary when source material contains public screenshots, declarations, account pages, comment sections, event photos, or product visuals.
+
+- Prefer real source-article images over polished generic illustrations. A relevant screenshot with platform UI is usually better than a clean but empty stock-style image.
+- Make the cover image immediately identify the event: account screenshot, public statement, long-post title, scene photo, product poster, or official product image.
+- Match inline images to article rhythm: first image shows what happened, second shows the key statement or evidence, third shows public reaction, product detail, or useful context.
+- Keep 3 images as the default for short Toutiao commentary: 1 cover plus 2 inline images. Add more only when the article length and evidence genuinely need them.
+- Avoid unrelated decorative images such as generic phones, keyboards, office desks, backs of people, city night scenes, or abstract AI art when a concrete source image exists.
+- For personal, health, dispute, and legal-risk topics, only use images from public reports or public account material. Do not generate fake scenes, illness visuals, paparazzi-style images, or privacy-invasive pictures.
+- After downloading, inspect candidate images and reject QR codes, logos, avatars-only images, tracking assets, and unrelated recommendation graphics even if the download script accepted them.
 
 Before doing slow image work, estimate the effort. If the workflow needs many downloads, manual source-page inspection, image conversion, or AI generation, tell the user that image handling may take significant time and ask whether to continue. If the user asks to skip images, do not save the article to the backend because image-free saves are forbidden by this skill.
 
