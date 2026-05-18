@@ -63,8 +63,8 @@ Mark downloaded search-result images with `needsReview: true` unless they are cl
 Before saving, run payload validation from the repository root or pass the static root explicitly:
 
 ```bash
-python scripts/validate_skill_article_payload.py payload.json
-python scripts/validate_skill_article_payload.py payload.json --static-root backend/static/article-images/uploads
+python scripts/validate_skill_article_payload.py -
+python scripts/validate_skill_article_payload.py - --static-root backend/static/article-images/uploads
 ```
 
 Validation must fail if any Markdown image or `coverImageUrl` points to a missing local file. Fix failures by downloading/uploading the real image first, not by editing the filename to look plausible.

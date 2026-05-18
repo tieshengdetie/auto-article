@@ -109,9 +109,20 @@ def validate_images(payload, static_roots):
             )
 
 
+def load_payload(payload_arg: str):
+    if payload_arg == "-":
+        raw = sys.stdin.buffer.read()
+        if not raw.strip():
+            raise ValueError("stdin payload is empty")
+        return json.loads(raw.decode("utf-8"))
+
+    with open(payload_arg, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("payload", help="Path to a JSON payload file")
+    parser.add_argument("payload", help="Path to a JSON payload file, or '-' to read JSON from stdin")
     parser.add_argument(
         "--static-root",
         action="append",
@@ -119,8 +130,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    with open(args.payload, "r", encoding="utf-8") as f:
-        payload = json.load(f)
+    payload = load_payload(args.payload)
 
     for key in REQUIRED:
         if not str(payload.get(key, "")).strip():

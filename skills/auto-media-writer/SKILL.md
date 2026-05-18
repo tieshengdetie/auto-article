@@ -13,6 +13,7 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 - If source articles have no usable images or image downloads fail, search the open web for relevant images using the article keywords before falling back to AI generation. Download selected search results to the same local uploads directory and insert those local URLs into the article.
 - Generate concrete raster fallback images (`png`, `jpg`, or `webp`) only after both source-image download and keyword-based internet image search fail. Never use SVG placeholders.
 - If image collection, downloading, conversion, or generation is likely to take a long time, pause and tell the user what will take time, how many images are needed, and whether the likely bottleneck is download, image search, or AI generation. Ask whether to continue image processing. If the user declines, return a text draft or planning result only and do not save the article to the backend.
+- Do not create article payload files unless a file is genuinely needed for audit or manual replay. Prefer passing the constructed payload JSON directly to the save/validation scripts through stdin (`-`). If a temporary payload file is unavoidable, write it outside the repository and delete it after save or dry-run validation. Never leave `payload.json`, `payload_draft.json`, or similar article payload files in the project or skill directory.
 
 ## Core Workflow
 
@@ -28,8 +29,8 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 8. Draft the article for the selected platform and article type, integrating the source pack into a coherent self-media article instead of summarizing search results mechanically. Make the title and opening more eye-catching when the facts support it, but never turn rumors into facts or add unsupported private details.
 9. Prepare images using `references/image-policy.md`. First download usable body images from cited source articles. If none are usable or downloads fail, search the internet for images using the segmented keywords and article angle, select editorially relevant results, download them to the local uploads directory, and reference their local URLs. Use AI raster generation only when both source images and keyword-based image search fail. Insert Markdown image tags at suitable positions. Do not save an image-free article.
 10. Before saving, call `humanizer-zh`. Pass the drafted Markdown article plus only the selected platform, category, target length, chosen title options, compact style profile, and essential source-fact constraints. Require `humanizer-zh` to preserve verified facts, URLs, dates, names, Markdown headings, image markers, and legal risk boundaries while removing AI-sounding transitions, template paragraphs, generic moralizing, and over-balanced phrasing.
-11. Create a minimal article payload using `references/auto-article-api.md`. Validate payload and image file existence with `scripts/validate_skill_article_payload.py`.
-12. Save through the low-freedom fast path: prefer `scripts/save_skill_article.py`, or otherwise make the exact documented HTTP `POST /api/v1/skill-articles`. Do not inspect backend source files, connect to MySQL, or write one-off database insertion scripts.
+11. Create a minimal article payload object using `references/auto-article-api.md`. Prefer validating and saving that JSON through stdin (`-`) without writing a payload file. If a JSON handoff file is needed, write it outside the repository, such as an OS temp directory or `C:\tmp\auto-media-writer\`, never under `skills/auto-media-writer/` and never as a lingering `payload.json` or `payload_draft.json` in the project tree. Delete temporary payload files after saving or dry-run validation.
+12. Save through the low-freedom fast path: when working inside this repository, prefer the repository-level entrypoint (`scripts/save-skill-article.ps1`, `scripts/save-skill-article.sh`, or `make saveSkillArticle`) that delegates to `scripts/save_skill_article.py`; otherwise use `scripts/save_skill_article.py` directly or make the exact documented HTTP `POST /api/v1/skill-articles`. Do not inspect backend source files, connect to MySQL, or write one-off database insertion scripts.
 13. Record any improvement learned during use in this skill before future runs when the user asks the skill to evolve.
 
 ## Topic And Research Rules
@@ -141,13 +142,28 @@ Use the auto-article HTTP API contract in `references/auto-article-api.md`. The 
 
 Treat saving as a fixed terminal API call, not as a code-discovery task:
 
-1. Build one JSON payload with only the fields allowed by `references/auto-article-api.md`.
-2. Validate the payload with `scripts/validate_skill_article_payload.py`; this also checks that `coverImageUrl` and Markdown image URLs point to real downloaded local files.
-3. Save with the bundled script:
+1. Build one JSON payload object with only the fields allowed by `references/auto-article-api.md`.
+2. Prefer passing the constructed JSON to the bundled scripts through stdin by using `-` as the payload argument. This avoids creating `payload.json` at all.
+3. Validate the payload with `scripts/validate_skill_article_payload.py`; this also checks that `coverImageUrl` and Markdown image URLs point to real downloaded local files.
+4. Save with the bundled script:
 
 ```sh
-python <skill-dir>/scripts/save_skill_article.py payload.json
+python <skill-dir>/scripts/save_skill_article.py -
 ```
+
+When working inside this repository, prefer the repository-level one-click entrypoint, which delegates to the bundled script and keeps validation centralized:
+
+```powershell
+.\scripts\save-skill-article.ps1 payload.json -DryRun
+.\scripts\save-skill-article.ps1 payload.json -BaseUrl http://localhost:9001
+```
+
+```sh
+make validateSkillArticle PAYLOAD=/tmp/auto-media-writer/payload.json
+make saveSkillArticle PAYLOAD=/tmp/auto-media-writer/payload.json BASE_URL=http://localhost:9001
+```
+
+If shell/stdin handling is impractical, use a temporary payload file outside the repository, for example `C:\tmp\auto-media-writer\<task-id>.payload.json` on Windows or `/tmp/auto-media-writer/<task-id>.payload.json` on Unix-like systems. Do not create or leave `payload.json`, `payload_draft.json`, or similar temporary article files in the project root or skill directory. After a successful save or dry-run validation, remove the temporary payload file unless the user explicitly asks to keep it for audit.
 
 Resolve the backend base URL before saving. Prefer `AUTO_ARTICLE_BASE_URL` or the user's explicit deployment URL. Use `--base-url http://localhost:9001` only for local development, not as an assumption for deployed environments. Use `--dry-run` to validate and preview the target URL without sending the request.
 

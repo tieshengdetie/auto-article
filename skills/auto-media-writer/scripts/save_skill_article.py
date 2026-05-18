@@ -13,30 +13,38 @@ DEFAULT_BASE_URL = "http://localhost:9001"
 ENDPOINT = "/api/v1/skill-articles"
 
 
-def run_validator(payload_path: Path, static_roots: list[str] | None) -> None:
+def run_validator(payload_arg: str, static_roots: list[str] | None, body: bytes | None = None) -> None:
     validator = Path(__file__).with_name("validate_skill_article_payload.py")
-    command = [sys.executable, str(validator), str(payload_path)]
+    command = [sys.executable, str(validator), payload_arg]
     for root in static_roots or []:
         command.extend(["--static-root", root])
     result = subprocess.run(
         command,
-        text=True,
+        input=body,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    stdout = result.stdout.decode("utf-8", errors="replace")
+    stderr = result.stderr.decode("utf-8", errors="replace")
     if result.returncode != 0:
-        if result.stderr:
-            print(result.stderr.strip(), file=sys.stderr)
-        if result.stdout:
-            print(result.stdout.strip(), file=sys.stderr)
+        if stderr:
+            print(stderr.strip(), file=sys.stderr)
+        if stdout:
+            print(stdout.strip(), file=sys.stderr)
         raise SystemExit(result.returncode)
-    if result.stdout:
-        print(result.stdout.strip())
+    if stdout:
+        print(stdout.strip())
 
 
-def load_payload(payload_path: Path) -> bytes:
-    with payload_path.open("r", encoding="utf-8") as f:
-        payload = json.load(f)
+def load_payload(payload_arg: str) -> bytes:
+    if payload_arg == "-":
+        raw = sys.stdin.buffer.read()
+        if not raw.strip():
+            raise ValueError("stdin payload is empty")
+        payload = json.loads(raw.decode("utf-8"))
+    else:
+        with Path(payload_arg).open("r", encoding="utf-8") as f:
+            payload = json.load(f)
     return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
@@ -78,7 +86,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Validate and save an auto-media-writer article payload through the HTTP API."
     )
-    parser.add_argument("payload", help="Path to the JSON payload file")
+    parser.add_argument("payload", help="Path to the JSON payload file, or '-' to read JSON from stdin")
     parser.add_argument(
         "--base-url",
         default=os.environ.get("AUTO_ARTICLE_BASE_URL", DEFAULT_BASE_URL),
@@ -102,9 +110,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    payload_path = Path(args.payload)
-    run_validator(payload_path, args.static_root)
-    body = load_payload(payload_path)
+    body = load_payload(args.payload)
+    run_validator(args.payload, args.static_root, body if args.payload == "-" else None)
     url = normalize_url(args.base_url)
 
     if args.dry_run:
@@ -115,4 +122,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        raise SystemExit(1)

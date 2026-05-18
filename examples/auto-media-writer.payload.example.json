@@ -1,0 +1,11 @@
+{
+  "taskId": "example-task-id",
+  "platform": "toutiao",
+  "keyword": "示例关键词",
+  "category": "society",
+  "title": "示例标题：请替换为最终标题",
+  "titleOptions": "[\"示例标题：请替换为最终标题\", \"备用标题\"]",
+  "summary": "这里放 100 字以内摘要。正式入库前请替换为真实摘要。",
+  "markdownContent": "![封面](/static/article-images/uploads/2026/05/example-task-id/cover.jpg)\n\n正文第一段。正式入库前请替换为 humanizer-zh 处理后的 Markdown 正文。",
+  "coverImageUrl": "/static/article-images/uploads/2026/05/example-task-id/cover.jpg"
+}

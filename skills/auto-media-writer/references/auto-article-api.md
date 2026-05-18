@@ -48,24 +48,38 @@ The backend stores only the generated article fields needed by the web page. Kee
 
 ## Fast Save Command
 
-Prefer the bundled save script instead of writing new code or inspecting backend files:
+Prefer the repository-level entrypoint, which delegates to the bundled save script instead of writing new code or inspecting backend files:
+
+```powershell
+.\scripts\save-skill-article.ps1 C:\tmp\auto-media-writer\demo.payload.json -DryRun
+.\scripts\save-skill-article.ps1 C:\tmp\auto-media-writer\demo.payload.json -BaseUrl http://localhost:9001
+```
 
 ```sh
-python scripts/save_skill_article.py payload.json
+make validateSkillArticle PAYLOAD=/tmp/auto-media-writer/demo.payload.json
+make saveSkillArticle PAYLOAD=/tmp/auto-media-writer/demo.payload.json BASE_URL=http://localhost:9001
+```
+
+Prefer passing the constructed payload JSON through stdin by using `-` as the payload argument. This avoids creating a `payload.json` file at all:
+
+```sh
+python skills/auto-media-writer/scripts/save_skill_article.py -
 ```
 
 Set the backend explicitly when it is not local:
 
 ```sh
-python scripts/save_skill_article.py payload.json --base-url https://api.example.com
+python skills/auto-media-writer/scripts/save_skill_article.py - --base-url https://api.example.com
 ```
 
 The script validates with `scripts/validate_skill_article_payload.py` before sending `POST /api/v1/skill-articles`. Validation checks required article fields, `titleOptions` JSON encoding, and local image file existence for `coverImageUrl` and Markdown image URLs. Use `--dry-run` to validate and preview the target URL without saving.
 
+If shell/stdin handling is impractical, write the transient payload JSON file outside the repository, for example `C:\tmp\auto-media-writer\<task-id>.payload.json` on Windows or `/tmp/auto-media-writer/<task-id>.payload.json` on Unix-like systems. Do not create or leave `payload.json`, `payload_draft.json`, or similar temporary article files in the project root or skill directory. Delete the temporary payload after save or dry-run validation unless the user explicitly asks to keep it.
+
 When running outside the repository root, pass the uploads directory explicitly:
 
 ```sh
-python scripts/save_skill_article.py payload.json --static-root backend/static/article-images/uploads
+python skills/auto-media-writer/scripts/save_skill_article.py - --static-root backend/static/article-images/uploads
 ```
 
 Do not connect to MySQL, read DAO/model/service code, or write a one-off Python database insertion script for article saving.
