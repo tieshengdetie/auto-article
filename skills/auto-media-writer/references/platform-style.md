@@ -26,6 +26,10 @@ Generate 3-5 title options for Toutiao, Baijiahao, and Zhihu. Generate 5-8 title
 
 ## Eye-Catching But Compliant Titles
 
+Hard length limit:
+
+- Every selected `title` and every item in `titleOptions` must be no more than 30 Chinese characters. Count Chinese punctuation, Arabic numerals, English letters, and spaces toward the limit. If a high-read pattern would exceed 30 characters, compress the second clause instead of keeping the full template.
+
 Allowed title hooks:
 
 - Conflict: public response, disagreement, turning point, or visible contradiction.
@@ -41,6 +45,42 @@ Forbidden title moves:
 - Use insulting labels, vulgar innuendo, defamation, guaranteed outcomes, or guilt-by-association.
 - Overpromise exclusive access with wording such as `实锤`, `内幕`, `彻底凉了`, or `全网封杀` unless a reliable source explicitly supports the claim and the article preserves that attribution.
 
+## Proven High-Read Title Patterns
+
+Use these patterns especially for Toutiao technology, business, consumer, society, and broad-interest hotspot articles. They are distilled from high-read Chinese self-media titles and should make the title feel like a concrete public event, not a generic report.
+
+Core style:
+
+- Lead with a named person, company, platform, product, region, or group. Avoid vague starts such as `近日`, `有消息称`, or `行业迎来变化` when a concrete entity is available.
+- Put the sharpest hook in the first 12-18 Chinese characters: firing, fine, loss, closure, refund, delisting, outage, bankruptcy risk, price plunge, public response, product release, or responsibility dispute.
+- Prefer a two-part headline joined by `，`, `：`, `；`, or `！`. The first part states the event; the second part gives the conflict, consequence, reversal, or human judgment.
+- Use verified numbers when available: age, days, percentages, rankings, money amounts, store counts, employee counts, market value, sales, or time spans. Do not invent or round numbers that sources do not support.
+- Make technology and finance titles human-visible. Translate product, capital, market, or company changes into effects on workers, consumers, investors, merchants, users, suppliers, or competitors.
+- Use contrast and reversal: `不是X，而是Y`, `原以为X，事实却是Y`, `刚刚X，又Y`, `十年后X`, `从A到B`. Keep the contrast factual.
+- Use public quotes only when the wording is sourced. Quote-style titles can work well when the quote is short, emotional, and attached to a named speaker.
+- Choose strong but defensible verbs: `下架`, `关闭`, `罚`, `丢失`, `暴跌`, `退场`, `拒绝`, `回应`, `打压`, `转移`, `拉上`, `拿到`, `撑起`. Avoid guilt-implying verbs unless official facts support them.
+- Keep Toutiao-style news commentary titles around 20-30 Chinese characters. Never exceed 30 characters; when the fact hook is long, keep the entity and consequence first and cut filler from the second clause.
+
+Reusable headline skeletons:
+
+- `“关键原话”，人物/公司回应：后半句`
+- `人物/公司：现在最担心X；她/他/它曾说Y`
+- `年过X、连续X天、丢失X%，人物/公司一句话点破`
+- `公司/平台X年后做出Y，背后的两股势力浮出水面`
+- `从A到B，人物/公司走过的路：真正难的是X`
+- `X发布/下架/关闭/罚款，Y却把问题推到台前`
+- `不是X，而是Y：这件事让谁最难受`
+- `X占营收Y%，半年倒闭Z家：行业问题藏不住了`
+- `这就是传说中“X”的Y，被A和B同时看上了`
+
+Selection rules:
+
+- For each article, generate at least one fact-forward title and at least one conflict/reversal title when sources support both.
+- For Toutiao, prioritize concrete entity + consequence + public emotion. The title may be punchy, but it must stay inside verified facts.
+- For Baijiahao, preserve searchable keywords while borrowing the high-read pattern; do not sacrifice clarity for suspense.
+- For Xiaohongshu, soften hard news titles into everyday relevance, such as `这事和普通人有什么关系` or `别只看热闹，真正影响在这里`.
+- For Zhihu, convert the same material into a question or judgment, such as `为什么X会走到这一步？` or `X事件真正值得讨论的是什么？`.
+
 ## Platform Baselines
 
 ### Toutiao
@@ -49,6 +89,7 @@ Forbidden title moves:
 - Opening: put the newest fact and central conflict in the first 100-150 Chinese characters.
 - Structure: short paragraphs, direct headings, clear timeline, public reaction, and a final interaction question.
 - Voice: lively and readable, with stronger hooks than Baijiahao but fewer personal notes than Xiaohongshu.
+- Recommendation focus: pass review cleanly, avoid duplicate-looking title/body/cover combinations, win the first recommendation batch with click reason, read-through momentum, comments, favorites, and shares.
 - Avoid: vague moralizing, slow background-first openings, and extreme shock/fear wording.
 
 ### Baijiahao
@@ -83,7 +124,7 @@ Forbidden title moves:
 
 - Category: `entertainment`
 - Article type: `gossip_quick_commentary`
-- Length: 500-800 Chinese characters.
+- Length: 500-800 Chinese characters; hard maximum 1000 Chinese characters.
 - Voice: eating-melon quick commentary; lively, skeptical, and public-reaction aware.
 - Title strategy: foreground the person, conflict, reversal, latest response, or netizen dispute.
 - Opening: directly state the latest development and biggest hook in 100-150 characters.
@@ -95,18 +136,19 @@ Forbidden title moves:
 
 - Category: `society`
 - Article type: `hotspot_commentary`
-- Length: 1200-1800 Chinese characters.
-- Voice: hotspot quick commentary with ordinary-reader relevance.
-- Title strategy: show the event, contradiction, responsibility question, or public concern.
-- Opening: state the event and why ordinary readers care.
-- Body rhythm: timeline, responsibility boundary, public emotion, practical implication.
+- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
+- Voice: social livelihood commentary with ordinary-reader relevance; treat the account as focused on民生纠纷、劳动职场、家庭养老、消费住房、教育医疗, and practical risk avoidance rather than broad social miscellany.
+- Title strategy: show the event, contradiction, responsibility question, public concern, or practical consequence for workers, families, consumers, elderly people, tenants, owners, parents, or ordinary residents.
+- Opening: state the event and immediately answer why ordinary readers should care.
+- Body rhythm: event timeline, who may face the same problem, responsibility or rule boundary, practical risk/reminder, public emotion.
 - Ending: give a clear but moderate viewpoint; avoid slogan-like preaching.
+- Recommendation tactics: avoid copying mainstream media's same timeline angle; lead with a concrete stakeholder and consequence, then add a rule, responsibility, cost, or避坑 angle that makes the piece distinct enough to survive duplicate reduction.
 
 #### Tech And Finance
 
 - Category: `tech_finance`
 - Article type: `plain_explainer`
-- Length: 1000-1600 Chinese characters.
+- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
 - Voice: plain-language explanation.
 - Title strategy: lead with user impact, price movement, product change, company competition, or industry consequence.
 - Opening: explain the newest change and who is affected.
@@ -117,7 +159,7 @@ Forbidden title moves:
 
 - Category: `knowledge`
 - Article type: `question_answer_explainer`
-- Length: 1000-1600 Chinese characters.
+- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
 - Voice: direct problem-solving explanation.
 - Title strategy: ask or answer a concrete reader question.
 - Opening: state the common confusion and short answer.
@@ -142,10 +184,10 @@ Forbidden title moves:
 - Category: `society`
 - Article type: `structured_news_explainer`
 - Length: 1500-2200 Chinese characters.
-- Voice: structured news interpretation.
-- Title strategy: use fact-forward wording with entity, event, and key question.
-- Opening: provide the latest development, core fact, and context.
-- Body rhythm: timeline, background, cause, impact, future attention point.
+- Voice: structured social livelihood interpretation with practical value for ordinary readers.
+- Title strategy: use fact-forward wording with entity, event, affected group, and key responsibility or rule question.
+- Opening: provide the latest development, core fact, context, and why this matters to ordinary families, workers, consumers, or residents.
+- Body rhythm: timeline, background, responsibility/rule boundary, ordinary-reader impact, future attention point.
 - Ending: restrained commentary tied to facts.
 
 #### Tech And Finance
@@ -189,9 +231,9 @@ Forbidden title moves:
 - Category: `society`
 - Article type: `personal_observation_digest`
 - Length: 600-900 Chinese characters.
-- Voice: personal observation plus information整理.
-- Title strategy: show emotional relevance or everyday impact without fearmongering.
-- Opening: explain what happened and why it hit ordinary people.
+- Voice: personal observation plus social livelihood information整理.
+- Title strategy: show emotional relevance, everyday impact, or a concrete避坑 reminder without fearmongering.
+- Opening: explain what happened and why it may hit ordinary people in work, family, housing, consumption, healthcare, education, or retirement.
 - Body rhythm: facts, personal observation, practical reminder, comment prompt.
 - Ending: fewer grand conclusions; more grounded empathy or caution.
 
@@ -236,10 +278,10 @@ Forbidden title moves:
 - Category: `society`
 - Article type: `rational_hotspot_analysis`
 - Length: 1500-2500 Chinese characters.
-- Voice: rational social analysis.
-- Title strategy: ask the responsibility, mechanism, or public-interest question.
-- Opening: state the answer or core judgment before expanding.
-- Body rhythm: fact boundary, responsibility, system context, public psychology, real-world impact.
+- Voice: rational social livelihood analysis with clear fact boundaries and ordinary-reader relevance.
+- Title strategy: ask the responsibility, mechanism, public-interest, or ordinary-person rights question.
+- Opening: state the answer or core judgment before expanding, then define how the issue connects to work, consumption, housing, family, healthcare, education, retirement, or public services.
+- Body rhythm: fact boundary, responsibility/rule boundary, system context, ordinary-reader impact, public psychology, practical takeaway.
 - Ending: balanced conclusion with concrete limits.
 
 #### Tech And Finance

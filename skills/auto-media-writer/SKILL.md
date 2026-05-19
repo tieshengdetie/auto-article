@@ -7,6 +7,8 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 
 ## Iron Rules
 
+- Toutiao articles must not exceed 1000 Chinese characters. This is a hard platform requirement: selected `title`, `summary`, image captions, and metadata are not counted, but the final Markdown body text for Toutiao must be edited down to 1000 Chinese characters or less before humanization, re-checked after humanization, and trimmed again before saving if needed.
+- Toutiao drafts must be treated as one-shot publish candidates: check title, body, images, factual wording, sensitive wording, and Markdown before saving. Avoid avoidable post-publish edits because repeated edits after review can hurt recommendation.
 - Never save an article to the auto-article backend before calling `humanizer-zh`. The de-AI pass is mandatory, not optional. If `humanizer-zh` is not installed, automatically search for and install it with the skill installation workflow, then continue only after it is available in the active session. If it cannot be installed or loaded, stop before database insertion and tell the user what blocked installation.
 - Never save an article without images. If cited source articles contain body images, download those images to `backend/static/article-images/uploads/<yyyy>/<mm>/<task-id>/` and insert their local `/static/article-images/uploads/...` URLs into the Markdown. If an image later looks unsuitable, the user will review and replace it manually; do not omit images for that reason.
 - Never invent local image paths. A Markdown image such as `![alt](/static/article-images/uploads/yyyy/mm/task/file.jpg)` is valid only after that exact file exists under the backend static uploads directory or after the backend upload API returned that URL. Do not create plausible filenames by hand.
@@ -24,7 +26,7 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 3. Segment keywords into at most 5 meaningful search terms: entity, event, time clue, audience intent, and controversy/angle. Keep only terms that change the search result. Example: `某明星离婚风波` -> `某明星`, `离婚`, `回应`, `网友热议`.
 4. Research the main combined phrase plus the 2-3 strongest segments first. Expand to more segments only when source facts are thin, stale, or contradictory. Query TianAPI MCP only for freshness, corroboration, or hot-list planning instead of mirroring every web search. Useful TianAPI tools include hot lists (`networkhot`, `nethot`, `weibohot`, `douyinhot`, `toutiaohot`, `wxhottopic`) and news search (`allnews`, `generalnews`).
 5. Merge useful information into a compact source pack. Keep 2-4 best sources total for normal articles and 5-6 only for complex society/finance topics. For each source, keep only title, URL, source, publish time, 1-2 verified facts, image URL candidates, and reliability notes. Remove duplicate, low-quality, stale, or unsupported claims. Do not invent facts, quotes, data, or dates absent from sources.
-6. Classify the article automatically. Use `entertainment` for celebrity/film/TV/influencer gossip and public reactions; use `society` for broad social news; use `tech_finance` for technology, business, consumer products, AI, finance, markets, companies, or industry competition; use `knowledge` for evergreen explainers, how-to, education, culture, health, workplace, or other non-breaking explanatory topics; otherwise choose `general`. Ask the user when the category changes the writing direction and remains uncertain.
+6. Classify the article automatically. Use `entertainment` for celebrity/film/TV/influencer gossip and public reactions; use `society` for broad social news, especially social livelihood topics about ordinary people's rights, disputes, work, retirement, family, consumption, housing, healthcare, education, and practical risk avoidance; use `tech_finance` for technology, business, consumer products, AI, finance, markets, companies, or industry competition; use `knowledge` for evergreen explainers, how-to, education, culture, health, workplace, or other non-breaking explanatory topics; otherwise choose `general`. Ask the user when the category changes the writing direction and remains uncertain.
 7. Select the style profile before drafting. Read `references/platform-style.md`, combine the selected platform with the selected category/article type, and follow that profile for title strategy, opening hook, paragraph rhythm, length, ending, and risk boundaries. Use the platform baseline first, then layer the article-type profile; when they conflict, platform distribution logic wins, and verified facts/legal risk boundaries override all style choices.
 8. Draft the article for the selected platform and article type, integrating the source pack into a coherent self-media article instead of summarizing search results mechanically. Make the title and opening more eye-catching when the facts support it, but never turn rumors into facts or add unsupported private details.
 9. Prepare images using `references/image-policy.md`. First download usable body images from cited source articles. If none are usable or downloads fail, search the internet for images using the segmented keywords and article angle, select editorially relevant results, download them to the local uploads directory, and reference their local URLs. Use AI raster generation only when both source images and keyword-based image search fail. Insert Markdown image tags at suitable positions. Do not save an image-free article.
@@ -38,6 +40,10 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 - Always segment user-provided Chinese keywords before research, but cap the first search pass at one combined phrase plus 2-3 strongest segments. Expand only when necessary.
 - For each segment, prefer latest credible sources. Capture concrete dates for recent events and distinguish verified facts from commentary, rumors, and platform reactions.
 - For daily planning, compare hot lists across Baidu, Weibo, Douyin, WeChat, Toutiao, all-network hot lists, and broad web news. Rank options by recency, discussion heat, source availability, platform fit, image availability, and legal risk. Present 5-8 choices with one short reason for each.
+- For social livelihood planning, treat the account direction as `社会民生实用评论`: focus on ordinary-reader relevance, public responsibility, and practical consequences rather than generic social news. Prefer topics in four stable lanes:民生纠纷（物业、邻里、消费、食品安全、服务投诉）, 劳动职场（欠薪、裁员、社保、劳动仲裁、灵活就业）, 家庭养老（赡养、养老金、看病、婚姻财产、子女矛盾）, and 社会热点复盘（only when the event connects to ordinary people's rules, risks, or daily choices）.
+- For social livelihood topics, use a 70/20/10 selection mix unless the user says otherwise: 70% fixed account lane, 20% adjacent public-interest hotspots, and 10% experimental subtopics such as local livelihood, retirement, workplace, or consumer protection. Reject topics that are only奇闻,猎奇, celebrity gossip, vague outrage, pure crime spectacle, or disconnected from the account's recurring reader need.
+- For Toutiao social livelihood topics, select stories that can pass all four recommendation filters: broad enough audience, low enough duplicate pressure, still inside a useful time window, and clearly tied to the account's vertical label. If a hot topic is oversupplied, only keep it when the angle is distinctive, such as `普通人会遇到的坑`, `责任到底归谁`, `这条规则很多人不知道`, or `为什么小城市/普通家庭更关心`.
+- Prefer topics with a visible everyday stakeholder: workers, renters, owners, consumers, parents, elderly people, patients, students, small merchants, or ordinary residents. Avoid cold policy trivia, isolated奇闻, pure crime details, and cases that cannot be generalized into rights, responsibility, cost, procedure, or risk.
 - Use internet search as the primary source. Use TianAPI MCP when web results are delayed, inaccessible, or need corroboration. If TianAPI provides the freshest relevant item, use it as the lead but still seek at least one corroborating source when possible.
 - Reuse the same entity and event keywords for image-search fallback. Combine the main subject with scene qualifiers such as `scene`, `editorial photo`, `event photo`, `product photo`, `press event`, `still`, or `concept art` so the searched images stay editorially relevant.
 - Keep source URLs in working notes and cite them in the article when useful, but do not send bulky source metadata to the backend article record. If source URLs include usable images, prefer them unless watermarked, copyrighted, low quality, or unavailable.
@@ -56,17 +62,21 @@ description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaoho
 When the user asks for article ideas, daily topic planning, or says they do not know what to write:
 
 1. Fetch current hot topics from internet search and TianAPI MCP hot-list tools when available.
-2. Compare topics across platforms and remove entries that lack credible sources, are too risky, or cannot support images.
-3. Return 5-8 topic options with suggested keywords, platform fit, likely category, why it is hot, source availability, and image availability.
-4. Wait for the user to choose a topic or keyword. After selection, run the normal keyword segmentation, research, style-profile selection, image, humanization, and save workflow.
+2. If the user asks for `社会民生`, `社会类`, `民生`, `普通人权益`, or similar directions, narrow the candidate pool to the social livelihood account direction before ranking. Prioritize topics that can be framed as `事件 -> 普通人会遇到什么 -> 规则/责任/避坑 -> 讨论问题`.
+3. Compare topics across platforms and remove entries that lack credible sources, are too risky, cannot support images, are overly cold, are oversupplied by duplicate hotspot takes, have very short shelf life with no follow-up value, or would dilute the account's vertical label.
+4. Return 5-8 topic options with suggested keywords, platform fit, likely category, social-livelihood lane when relevant, why it is hot, reader relevance, source availability, and image availability.
+5. Wait for the user to choose a topic or keyword. After selection, run the normal keyword segmentation, research, style-profile selection, image, humanization, and save workflow.
 
 ## Platform And Style Defaults
 
 - Always read `references/platform-style.md` before drafting platform-specific content. It contains the authoritative platform x article-type matrix.
 - Default tone level: eye-catching but compliant. Use conflict, contrast, suspense, public reaction, and timeline hooks when supported by sources; do not use clickbait that invents facts or implies unverified guilt.
+- When generating `title` and `titleOptions`, keep every title no more than 30 Chinese characters, then apply `Proven High-Read Title Patterns` from `references/platform-style.md`: prefer concrete named entities, verified numbers, two-part punctuation, contrast/reversal, public quotes only when sourced, and human-visible consequences for tech, finance, consumer, and society topics.
+- Toutiao article bodies must stay under 1000 Chinese characters regardless of article type. Compress by reducing background, limiting headings, keeping only the strongest verified facts, and cutting generic conclusions; do not exceed the cap to preserve a fuller source summary.
 - Entertainment articles default to an `entertainment` / `gossip_quick_commentary` profile: lively, gossip-aware, skeptical, and readable. Expand only when the user asks for deeper analysis or the source pack has a verified timeline requiring more context.
-- Society/general news should combine hotspot commentary with ordinary-reader relevance and emotional resonance, without empty preaching.
+- Society/general news should avoid becoming `社会综合` by default. For social livelihood requests, frame the article as ordinary people's rights, responsibilities, costs, choices, and risk avoidance, with emotional resonance but no empty preaching.
 - Toutiao prioritizes fast context, broad-reader readability, clear conflict, and interactive endings.
+- Toutiao social livelihood writing should optimize the first recommendation batch: the title must make the click reason visible, the first 100 Chinese characters must explain what happened and why it matters, the middle should keep readers moving with short paragraphs and concrete stakes, and the ending should invite comments from people with similar experience.
 - Baijiahao prioritizes search-friendly structure, descriptive headings, background, timeline, and explanatory value.
 - Xiaohongshu prioritizes native note rhythm, short paragraphs, personal observation, practical takeaways, and tags.
 - Zhihu prioritizes a clear judgment or question, structured reasoning, causes, tradeoffs, uncertainty, and conclusion.
@@ -82,6 +92,18 @@ Use this pattern for Toutiao society, creator-economy, consumer, and broad-inter
 - Keep emotion restrained but present. Do not sensationalize illness, private life, tragedy, or unverified motives; move the point toward ordinary people, work rhythm, consumption decisions, or public responsibility.
 - End with a discussion question close to the reader's situation instead of a grand slogan.
 - Before saving, run an explicit de-AI rewrite pass that removes template transitions, numbered lecture structure, over-balanced phrasing, generic moralizing, and stiff summary paragraphs.
+- If a Toutiao finance or consumer article still feels AI-like after the first pass, rewrite it toward a first-person editorial voice: use concrete scene details, fewer classroom headings, short judgment sentences, reader-accounting language, and avoid neat three-part explanations unless the article genuinely needs them.
+
+### Toutiao Social Livelihood Recommendation Rules
+
+Use these distilled rules when the user asks for Toutiao society, social livelihood, ordinary rights, or民生新闻. Do not embed the source article or its irrelevant platform history; keep only these reusable recommendation constraints.
+
+- Direction: write `社会民生实用评论`, not broad social miscellany. Stable lanes are民生纠纷, 劳动职场, 家庭养老, and social hotspot复盘 with ordinary-reader rules or risks.
+- Selection filter: keep topics with broad everyday relevance, visible conflict, reliable public sources, usable images, and follow-up value. Drop topics that are too cold, too niche, too sensitive, already oversupplied, or hard to verify.
+- Differentiation: if mainstream media already covers the same event, change the angle to responsibility boundary, ordinary-person cost, procedure reminder, or risk avoidance.
+- Title and opening: put the strongest concrete hook in the first 12-18 Chinese characters; use the first 100 Chinese characters to answer `发生了什么` and `和普通人有什么关系`.
+- Body and retention: keep Toutiao bodies under 1000 Chinese characters, with 3-5 short sections at most. Each section should add a new fact, contradiction, affected group, rule boundary, or practical consequence.
+- Interaction and publish check: end with a concrete comment question tied to work, property, consumption, eldercare, schooling, medical care, or family responsibility. Before saving, verify title/body/cover are not generic duplicates and sensitive claims are attributed and restrained.
 
 ## Style Profile Notes
 
@@ -100,8 +122,8 @@ Keep a compact style profile in working notes and pass it to `humanizer-zh`. Do 
 
 Always generate:
 
-- one selected `title`
-- multiple `titleOptions`
+- one selected `title` no more than 30 Chinese characters
+- multiple `titleOptions`, each no more than 30 Chinese characters
 - `summary`
 - Markdown `markdownContent`
 - `coverImageUrl`
@@ -184,3 +206,4 @@ For installing TianAPI MCP in another agent, use the copy-paste templates in `re
 ## Evolution
 
 When the user says the result is too stiff, too generic, too long, wrong platform tone, weak title, poor image choice, or otherwise not right, update the relevant style, image, API, or workflow guidance in this skill. Keep changes concise and reusable.
+
