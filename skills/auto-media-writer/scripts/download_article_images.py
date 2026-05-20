@@ -15,6 +15,17 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SKIP_HINTS = ("logo", "avatar", "icon", "qrcode", "qr", "spacer", "blank", "loading")
 
 
+class ChineseArgumentParser(argparse.ArgumentParser):
+    def format_help(self):
+        return (
+            super().format_help()
+            .replace("usage:", "用法:")
+            .replace("positional arguments:", "位置参数:")
+            .replace("options:", "选项:")
+            .replace("show this help message and exit", "显示帮助并退出")
+        )
+
+
 def fetch(url: str, timeout: int = 15) -> bytes:
     req = Request(url, headers={"User-Agent": "Mozilla/5.0 auto-media-writer"})
     with urlopen(req, timeout=timeout) as resp:
@@ -51,7 +62,7 @@ def local_public_path(static_root: Path, public_prefix: str, relative_dir: Path,
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = ChineseArgumentParser(description="从来源文章中下载可用正文图片。")
     parser.add_argument("--article-url", action="append", required=True)
     parser.add_argument("--task-id", required=True)
     parser.add_argument("--static-root", default="backend/static/article-images/uploads")
@@ -72,7 +83,7 @@ def main() -> int:
         try:
             html = fetch(article_url).decode("utf-8", errors="ignore")
         except Exception as exc:
-            print(f"warning: failed to fetch article {article_url}: {exc}", file=sys.stderr)
+            print(f"警告：获取文章失败 {article_url}: {exc}", file=sys.stderr)
             continue
         for image_url in extract_image_urls(article_url, html):
             if len(downloaded) >= args.max_images:
@@ -80,7 +91,7 @@ def main() -> int:
             try:
                 data = fetch(image_url)
             except Exception as exc:
-                print(f"warning: failed to fetch image {image_url}: {exc}", file=sys.stderr)
+                print(f"警告：获取图片失败 {image_url}: {exc}", file=sys.stderr)
                 continue
             if len(data) < 20_000:
                 continue

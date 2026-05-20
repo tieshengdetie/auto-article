@@ -1,30 +1,30 @@
-# Image Policy
+# 图片策略
 
-## Decision Order
+## 决策顺序
 
-1. When a related source article exists, inspect the article page for images that appear in or near the article body.
-2. If source articles contain body images, download them to the backend uploads directory and reference the local static URL in Markdown. Prefer local copies over hotlinking so future publishing is stable.
-3. Do not invent local static URLs. A path under `/static/article-images/uploads/...` is valid only when it was printed by a bundled download script, returned by `POST /api/v1/skill-articles/upload-image`, or generated from an actual raster file saved under the backend uploads directory.
-4. Do not omit images merely because they may need manual review. If an image is imperfect but usable, still download and insert it, then mark review concerns in the `images` metadata.
-5. Skip only images that are clearly not article material: tracking pixels, logos, avatars, QR codes, blank placeholders, broken files, obvious unrelated recommendations, or files too small for article use.
-6. If no source image exists or downloads fail, search the internet for images using the article keywords before using AI generation. Reuse the article entities and event words, and add scene qualifiers such as `editorial photo`, `scene`, `press event`, `product photo`, `still`, `poster`, or `concept art` based on topic type.
-7. Download selected internet-search results to the same local uploads directory and use local URLs in Markdown. Do not hotlink search result URLs directly in saved articles.
-8. Generate AI images only when both source-image download and keyword-based internet image search fail.
-9. Never use empty SVG placeholder graphics as generated article images. AI fallback images should be raster assets (`.png`, `.jpg`, or `.webp`) with concrete visual content.
+1. 存在相关来源文章时，检查文章页面中位于正文或正文附近的图片。
+2. 如果来源文章包含正文图片，下载到后端上传目录，并在 Markdown 中引用本地静态 URL。优先使用本地副本而不是热链，保证后续发布稳定。
+3. 不要虚构本地静态 URL。只有路径由捆绑下载脚本打印、由 `POST /api/v1/skill-articles/upload-image` 返回，或确实来自后端上传目录下保存的栅格文件时，`/static/article-images/uploads/...` 才有效。
+4. 不要仅因为图片可能需要人工审核就省略图片。如果图片不完美但可用，仍下载并插入，然后在 `images` 元数据中标注审核关注点。
+5. 只跳过明显不是文章素材的图片：追踪像素、标志、头像、二维码、空白占位图、损坏文件、明显无关推荐图，或尺寸太小不适合文章使用的文件。
+6. 如果没有来源图片或下载失败，先用文章关键词搜索互联网图片，再使用 AI 生成。复用文章实体和事件词，并按主题类型加入场景限定词，例如 `editorial photo`、`scene`、`press event`、`product photo`、`still`、`poster` 或 `concept art`。
+7. 把选中的网络搜索结果下载到同一套本地上传目录，并在 Markdown 中使用本地 URL。保存文章时不要直接热链搜索结果 URL。
+8. 只有来源图片下载和关键词网络图片搜索都失败时，才生成 AI 图片。
+9. 禁止使用空 SVG 占位图作为生成文章图片。AI 兜底图必须是有具体视觉内容的栅格资源（`.png`、`.jpg` 或 `.webp`）。
 
-## Storage
+## 存储
 
-Store downloaded or generated images under:
+下载或生成的图片存放在：
 
 `backend/static/article-images/uploads/<yyyy>/<mm>/<task-id>/`
 
-Expose them through:
+通过以下路径暴露：
 
 `/static/article-images/uploads/<yyyy>/<mm>/<task-id>/<filename>`
 
-The saved article must use public paths or absolute backend URLs that can be rendered by the frontend and reused by future publish jobs.
+保存后的文章必须使用前端可渲染、后续发布任务可复用的公开路径或绝对后端 URL。
 
-Use `scripts/download_article_images.py` when possible:
+尽量使用 `scripts/download_article_images.py`：
 
 ```bash
 python scripts/download_article_images.py \
@@ -35,9 +35,9 @@ python scripts/download_article_images.py \
   --public-prefix "/static/article-images/uploads"
 ```
 
-The script prints an `images` JSON array. Use those local URLs in the article Markdown. Review results and remove only clearly unrelated recommendation images before saving.
+脚本会打印 `images` JSON 数组。文章 Markdown 使用其中的本地 URL。保存前检查结果，只移除明显无关的推荐图。
 
-When article images are missing or download attempts fail, search the web with the built-in image search tool first, then download the chosen results with `scripts/download_image_candidates.py`:
+当文章图片缺失或下载尝试失败时，先使用内置图片搜索工具搜索网络，再用 `scripts/download_image_candidates.py` 下载选中的结果：
 
 ```bash
 python scripts/download_image_candidates.py \
@@ -51,38 +51,38 @@ python scripts/download_image_candidates.py \
   --public-prefix "/static/article-images/uploads"
 ```
 
-The search query should be derived from the article keywords rather than copied mechanically from the title. Prefer specific entities plus scene words. Example query patterns:
+搜索词应来自文章关键词，而不是机械复制标题。优先使用具体实体加场景词。示例搜索模式：
 
-- Entertainment: `<person name> latest update editorial photo`
-- Tech: `<brand or product> press event product photo`
-- Society: `<place or event> scene photo`
-- Film/TV: `<title or actor> still poster`
+- 娱乐：`<person name> latest update editorial photo`
+- 科技：`<brand or product> press event product photo`
+- 社会：`<place or event> scene photo`
+- 影视：`<title or actor> still poster`
 
-Mark downloaded search-result images with `needsReview: true` unless they are clearly authoritative and tightly matched to the article.
+除非图片来源权威且与文章高度匹配，否则下载的搜索结果图片应标记 `needsReview: true`。
 
-Before saving, run payload validation from the repository root or pass the static root explicitly:
+保存前，在仓库根目录运行载荷校验，或显式传入静态根目录：
 
 ```bash
 python scripts/validate_skill_article_payload.py -
 python scripts/validate_skill_article_payload.py - --static-root backend/static/article-images/uploads
 ```
 
-Validation must fail if any Markdown image or `coverImageUrl` points to a missing local file. Fix failures by downloading/uploading the real image first, not by editing the filename to look plausible.
+如果任何 Markdown 图片或 `coverImageUrl` 指向缺失的本地文件，校验必须失败。通过先下载/上传真实图片来修复，不要编辑成看起来合理的文件名。
 
-## Required Images
+## 必需图片
 
-- Cover: exactly 1 preferred image.
-- Inline: 2-3 images by default.
-- Insert inline images after natural section breaks, not inside the opening paragraph.
-- If source images are available, at least the cover should come from a downloaded source image.
-- If source images are unavailable, the cover should come from a downloaded web-search result before AI generation is considered.
-- If downloaded images have uncertain fit, set `needsReview: true` in metadata and keep them in the draft for the user's audit.
-- If no source image or searched image is available, generate AI raster images instead. The final saved article must never be image-free.
-- The saved payload must include `coverImageUrl`, and `markdownContent` must include at least one Markdown image whose file exists locally.
+- 封面：首选 1 张。
+- 正文图：默认 2-3 张。
+- 正文图插在自然小节断点之后，不要插在开头段落内部。
+- 如果来源图片可用，至少封面应来自下载的来源图片。
+- 如果来源图片不可用，在考虑 AI 生成前，封面应来自下载的网络搜索结果。
+- 如果下载图片适配度不确定，在元数据中设置 `needsReview: true`，并保留在草稿中供用户审计。
+- 如果没有来源图或搜索图可用，生成 AI 栅格图。最终保存的文章绝不能无图。
+- 保存载荷必须包含 `coverImageUrl`，且 `markdownContent` 必须至少包含一张文件真实存在的 Markdown 图片。
 
-## Image Metadata
+## 图片元数据
 
-Record each image in the `images` JSON field:
+在 `images` JSON 字段中记录每张图片：
 
 ```json
 {
@@ -98,7 +98,7 @@ Record each image in the `images` JSON field:
 }
 ```
 
-Use `type` values:
+`type` 可用值：
 
 - `source_url`
 - `downloaded`
@@ -106,8 +106,8 @@ Use `type` values:
 - `ai_generated`
 - `missing`
 
-## AI Image Guidance
+## AI 图片指导
 
-Generate realistic editorial raster images, not fake screenshots or fake news photos. Avoid making real people appear to do things that sources do not support. For entertainment articles, prefer concrete but non-defamatory visual scenes such as stage lights, phones showing generic comment feeds, media microphones, blurred public-event backdrops, or symbolic relationship-boundary compositions rather than invented paparazzi photos.
+生成真实感编辑类栅格图片，不要生成虚假截图或虚假新闻照片。避免让真实人物做出来源不支持的事情。娱乐文章优先选择具体但不构成诽谤的视觉场景，例如舞台灯光、显示泛化评论流的手机、媒体话筒、虚化公共活动背景，或象征关系边界的构图，而不是编造偷拍照片。
 
-Do not generate dark, empty, text-heavy, or abstract SVG artwork as article imagery.
+不要生成黑暗、空洞、文字过多或抽象 SVG 风格的文章图片。

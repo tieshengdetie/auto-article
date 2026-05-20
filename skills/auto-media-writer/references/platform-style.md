@@ -1,67 +1,78 @@
-# Platform Style
+# 平台风格
 
-## Style Selection
+## 风格选择
 
-Build every article style from two layers:
+每篇文章的风格由两层组成：
 
-1. Select the platform baseline: `toutiao`, `baijiahao`, `xiaohongshu`, or `zhihu`.
-2. Select the article-type layer from the matrix: entertainment gossip, society hotspot, tech/finance explainer, or knowledge explainer.
+1. 选择平台基线：`toutiao`、`baijiahao`、`xiaohongshu` 或 `zhihu`。
+2. 从矩阵中选择文章类型层：娱乐八卦、社会热点、科技/财经解释或知识解释。
 
-When the platform and article type conflict, prioritize platform distribution logic and reader expectation. Verified facts, source limits, legal risk, and platform safety always override style. Use an eye-catching but compliant tone by default: make the conflict, contrast, suspense, public reaction, timeline, or reader impact visible, but never turn rumor into fact or imply unsupported guilt.
+当平台和文章类型冲突时，优先考虑平台分发逻辑和读者预期。已核实事实、信源限制、法律风险和平台安全始终高于风格。默认使用“抓眼但合规”的语气：让冲突、对比、悬念、公众反应、时间线或读者影响变得可见，但绝不把传闻写成事实，也不暗示无来源的罪责。
 
-Record the chosen profile in `styleProfile` with `platform`, `category`, `articleType`, `toneLevel`, `platformVoice`, `typeVoice`, `titleStrategy`, and `riskNotes`.
+把选定档案记录到 `styleProfile`，字段包括 `platform`、`category`、`articleType`、`toneLevel`、`platformVoice`、`typeVoice`、`titleStrategy` 和 `riskNotes`。今日头条额外记录 `toutiaoContentForm`，值为 `microtoutiao` 或 `article`。
 
-## Shared Structure
+## 通用结构
 
-Use this baseline unless the selected profile overrides it:
+除非选定档案覆盖，否则使用以下基线：
 
-1. Title
-2. Opening hook that states the event and why readers care
-3. Background and timeline
-4. 3-5 second-level headings
-5. Analysis of causes, conflict, public emotion, and likely impact
-6. Closing viewpoint and interaction question
+1. 标题
+2. 说明事件和读者关心点的开头钩子
+3. 背景和时间线
+4. 3-5 个二级小标题
+5. 原因、冲突、公众情绪和可能影响分析
+6. 收束观点，以及贴合主题的互动或回顾
 
-Generate 3-5 title options for Toutiao, Baijiahao, and Zhihu. Generate 5-8 title options for Xiaohongshu.
+今日头条、百家号和知乎生成 3-5 个标题选项。小红书生成 5-8 个标题选项。
 
-## Eye-Catching But Compliant Titles
+## 结尾变化
 
-Hard length limit:
+不要让每篇文章都以问题结尾。根据平台、主题和文章类型选择收束方式：
 
-- Every selected `title` and every item in `titleOptions` must be no more than 30 Chinese characters. Count Chinese punctuation, Arabic numerals, English letters, and spaces toward the limit. If a high-read pattern would exceed 30 characters, compress the second clause instead of keeping the full template.
+- 只有文章自然邀请相似经历、真实选择或未解公共议题时，才使用读者问题。
+- 娱乐、广泛评论和知乎式分析在事实支撑立场时，使用明确判断。
+- 社会和社会民生主题使用实用提醒、责任边界或风险提示。
+- 科技、财经、市场、政策和发展中事件使用后续关注点或不确定性标记。
+- 知识解释和小红书实用帖使用简短收获、回顾或利于收藏的提示。
+- 避免在不同草稿中重复 `你怎么看？`、`你遇到过吗？` 或 `评论区聊聊` 这类结尾。
 
-Allowed title hooks:
+## 抓眼但合规的标题
 
-- Conflict: public response, disagreement, turning point, or visible contradiction.
-- Contrast: before/after, expectation/reality, official response/public reaction.
-- Suspense: what changed, what is still unclear, why people are arguing.
-- Timeline: latest update, key moment, response after controversy.
-- Reader impact: what ordinary users, fans, consumers, parents, workers, or investors should notice.
+硬性长度限制：
 
-Forbidden title moves:
+- 所选 `title` 和 `titleOptions` 中每一项都不得超过 30 个中文字符。中文标点、阿拉伯数字、英文字母和空格都计入长度。如果高阅读模式会超过 30 字，压缩后半句，而不是保留完整模板。
 
-- State rumors, screenshots, private-life speculation, or anonymous claims as verified facts.
-- Invent quotes, motives, relationships, money amounts, dates, medical details, or legal conclusions.
-- Use insulting labels, vulgar innuendo, defamation, guaranteed outcomes, or guilt-by-association.
-- Overpromise exclusive access with wording such as `实锤`, `内幕`, `彻底凉了`, or `全网封杀` unless a reliable source explicitly supports the claim and the article preserves that attribution.
+允许的标题钩子：
 
-## Proven High-Read Title Patterns
+- 冲突：公开回应、分歧、转折点或可见矛盾。
+- 对比：前后变化、预期与现实、官方回应与公众反应。
+- 悬念：发生了什么变化、仍不清楚什么、为什么大家争论。
+- 时间线：最新进展、关键时刻、争议后的回应。
+- 读者影响：普通用户、粉丝、消费者、父母、劳动者或投资者应该注意什么。
 
-Use these patterns especially for Toutiao technology, business, consumer, society, and broad-interest hotspot articles. They are distilled from high-read Chinese self-media titles and should make the title feel like a concrete public event, not a generic report.
+禁止的标题做法：
 
-Core style:
+- 把传闻、截图、私生活猜测或匿名说法写成已核实事实。
+- 编造引语、动机、关系、金额、日期、医疗细节或法律结论。
+- 使用侮辱标签、低俗暗示、诽谤、保证性结果或连坐式暗示。
+- 除非可靠来源明确支持且正文保留归因，否则不要用 `实锤`、`内幕`、`彻底凉了`、`全网封杀` 等词暗示独家或定论。
 
-- Lead with a named person, company, platform, product, region, or group. Avoid vague starts such as `近日`, `有消息称`, or `行业迎来变化` when a concrete entity is available.
-- Put the sharpest hook in the first 12-18 Chinese characters: firing, fine, loss, closure, refund, delisting, outage, bankruptcy risk, price plunge, public response, product release, or responsibility dispute.
-- Prefer a two-part headline joined by `，`, `：`, `；`, or `！`. The first part states the event; the second part gives the conflict, consequence, reversal, or human judgment.
-- Use verified numbers when available: age, days, percentages, rankings, money amounts, store counts, employee counts, market value, sales, or time spans. Do not invent or round numbers that sources do not support.
-- Make technology and finance titles human-visible. Translate product, capital, market, or company changes into effects on workers, consumers, investors, merchants, users, suppliers, or competitors.
-- Use contrast and reversal: `不是X，而是Y`, `原以为X，事实却是Y`, `刚刚X，又Y`, `十年后X`, `从A到B`. Keep the contrast factual.
-- Use public quotes only when the wording is sourced. Quote-style titles can work well when the quote is short, emotional, and attached to a named speaker.
-- Choose strong but defensible verbs: `下架`, `关闭`, `罚`, `丢失`, `暴跌`, `退场`, `拒绝`, `回应`, `打压`, `转移`, `拉上`, `拿到`, `撑起`. Avoid guilt-implying verbs unless official facts support them.
-- Keep Toutiao-style news commentary titles around 20-30 Chinese characters. Never exceed 30 characters; when the fact hook is long, keep the entity and consequence first and cut filler from the second clause.
+## 高阅读标题模式
 
-Reusable headline skeletons:
+这些模式尤其适用于今日头条的科技、商业、消费、社会和广泛兴趣热点文章。它们来自中文自媒体高阅读标题经验，应让标题像一个具体公共事件，而不是泛泛报告。
+
+核心风格：
+
+- 以具名人物、公司、平台、产品、地区或群体开头。当有具体实体时，避免 `近日`、`有消息称`、`行业迎来变化` 这类模糊开头。
+- 把最锋利钩子放在前 12-18 个中文字符：解雇、罚款、亏损、关闭、退款、退市、宕机、破产风险、价格暴跌、公开回应、产品发布或责任争议。
+- 优先使用 `，`、`：`、`；` 或 `！` 连接的两段式标题。前半句说事件，后半句给冲突、后果、反转或人的判断。
+- 有已核实数字时使用数字：年龄、天数、百分比、排名、金额、门店数、员工数、市值、销量或时间跨度。不要编造或四舍五入来源不支持的数字。
+- 科技和财经标题要让人能感到影响。把产品、资本、市场或公司变化翻译成对劳动者、消费者、投资者、商家、用户、供应商或竞争者的影响。
+- 使用对比和反转：`不是X，而是Y`、`原以为X，事实却是Y`、`刚刚X，又Y`、`十年后X`、`从A到B`。对比必须有事实支撑。
+- 只在原话有来源时使用公开引语。引语式标题适合短、有情绪、且绑定具名说话人的内容。
+- 选择强但可辩护的动词：`下架`、`关闭`、`罚`、`丢失`、`暴跌`、`退场`、`拒绝`、`回应`、`打压`、`转移`、`拉上`、`拿到`、`撑起`。除非官方事实支持，否则避免暗示罪责的动词。
+- 今日头条式新闻评论标题控制在 20-30 个中文字符。绝不超过 30 字；事实钩子过长时，保留实体和后果，删除后半句填充词。
+
+可复用标题骨架：
 
 - `“关键原话”，人物/公司回应：后半句`
 - `人物/公司：现在最担心X；她/他/它曾说Y`
@@ -73,248 +84,265 @@ Reusable headline skeletons:
 - `X占营收Y%，半年倒闭Z家：行业问题藏不住了`
 - `这就是传说中“X”的Y，被A和B同时看上了`
 
-Selection rules:
+选择规则：
 
-- For each article, generate at least one fact-forward title and at least one conflict/reversal title when sources support both.
-- For Toutiao, prioritize concrete entity + consequence + public emotion. The title may be punchy, but it must stay inside verified facts.
-- For Baijiahao, preserve searchable keywords while borrowing the high-read pattern; do not sacrifice clarity for suspense.
-- For Xiaohongshu, soften hard news titles into everyday relevance, such as `这事和普通人有什么关系` or `别只看热闹，真正影响在这里`.
-- For Zhihu, convert the same material into a question or judgment, such as `为什么X会走到这一步？` or `X事件真正值得讨论的是什么？`.
+- 每篇文章至少生成一个事实前置标题；当来源支持冲突/反转时，再生成至少一个冲突或反转标题。
+- 今日头条优先具体实体 + 后果 + 公众情绪。标题可以有冲击力，但必须停留在已核实事实内。
+- 百家号保留搜索关键词，同时借用高阅读模式；不要为了悬念牺牲清晰度。
+- 小红书把硬新闻标题软化成日常相关性，例如 `这事和普通人有什么关系` 或 `别只看热闹，真正影响在这里`。
+- 知乎把同一材料改写成问题或判断，例如 `为什么X会走到这一步？` 或 `X事件真正值得讨论的是什么？`。
 
-## Platform Baselines
+## 平台基线
 
-### Toutiao
+### 今日头条
 
-- Audience: broad, fast-scanning readers who expect quick context and a visible viewpoint.
-- Opening: put the newest fact and central conflict in the first 100-150 Chinese characters.
-- Structure: short paragraphs, direct headings, clear timeline, public reaction, and a final interaction question.
-- Voice: lively and readable, with stronger hooks than Baijiahao but fewer personal notes than Xiaohongshu.
-- Recommendation focus: pass review cleanly, avoid duplicate-looking title/body/cover combinations, win the first recommendation batch with click reason, read-through momentum, comments, favorites, and shares.
-- Avoid: vague moralizing, slow background-first openings, and extreme shock/fear wording.
+- 受众：广泛、快速浏览，期待快速背景和可见观点的读者。
+- 发布体裁：先判断是 `microtoutiao` 还是 `article`。微头条沿用短评风格，重速度和互动；文章写 1000-1200 个中文字符，重民生影响、争议分析、案例和实用信息。
+- 开头：`microtoutiao` 在前 50 个中文字符内给出悬念、冲突、数字或反差；`article` 把最新事实和核心冲突放进前 100-150 个中文字符。
+- 结构：`microtoutiao` 用短段落，每段 1-3 句，多用具体数字、短句和少量自然 emoji；中段 200-400 字讲故事、细节、对话或转折；结尾约 30 字做提问互动。`article` 使用直接小标题、清晰时间线、公众反应，以及可包含评论引导的主题化结尾。
+- 语气：活泼可读，钩子强于百家号，但个人笔记感少于小红书。
+- 推荐重点：干净过审，避免标题/正文/封面组合看起来重复；用点击理由、读完率、评论、收藏和分享赢得第一批推荐。
+- 长度：`microtoutiao` 推荐 200-800 个中文字符，硬上限 1000；太短信息量不足，太长完读率容易下降。`article` 统一 1000-1200 个中文字符。
+- 微头条图片：配 1-3 张高清相关图，优先真实来源图、公开截图、场景图或产品图；图文微头条优先于纯文字。拒绝广告图、无关配图、空洞插画和与正文关键词不匹配的素材。
+- 微头条领域：新手优先家庭日常、婆媳育儿、职场趣事、省钱技巧、生活常识、情感故事和真实经历。避开搬运、低俗、敏感和 AI 低质批量文。
+- 头条文章模式：正文短段落、白话、信息密度高；开头 100-150 字说明发生了什么和为什么普通人该关心；中段写事实、影响、案例/网友观点、规则边界和作者判断；少量重点可加粗。
+- 民生热点文章：标题可在事实允许时用 `没想到`、`紧急通知` 或 `所有人注意` 开头；正文把政策、规则或责任翻译成普通人的钱、时间、流程、权益和风险。
+- 热点争议文章：标题采用“疑问 + 争议点”；正文客观梳理前因后果和不同网友观点，再给出理性但有锋芒的判断。只有确实存在公共讨论空间时，结尾才引导评论。
+- 避免：空泛说教、慢背景开头、极端震惊/恐惧措辞。
 
-### Baijiahao
+### 百家号
 
-- Audience: search-driven readers who need background, timeline, and explanatory value.
-- Opening: name the entity, event, latest development, and why it matters.
-- Structure: descriptive headings, fact-forward timeline, background context, and broader meaning.
-- Voice: restrained, explanatory, and slightly formal without becoming stiff.
-- Avoid: overly colloquial wording, unsupported emotion, and headings that hide the main fact.
+- 受众：搜索驱动，需要背景、时间线和解释价值的读者。
+- 开头：写明实体、事件、最新进展和重要性。
+- 结构：描述性小标题、事实前置时间线、背景语境和更广意义。
+- 语气：克制、解释性、略正式但不僵硬。
+- 避免：过度口语、无来源情绪、隐藏核心事实的小标题。
 
-### Xiaohongshu
+### 小红书
 
-- Audience: note-style readers who prefer fast emotional entry, short paragraphs, and usable takeaways.
-- Opening: first screen should answer `这事为什么值得看` or `和我有什么关系`.
-- Structure: short paragraphs, compact lists when helpful, native tags at the end, and a comment-friendly closing.
-- Voice: conversational, observant, and clean. Use emoji only if the user asks for them.
-- Avoid: stiff transitions such as `综上所述`, `值得注意的是`, `从某种程度上来说`, and long news-report paragraphs.
+- 受众：偏好快速情绪入口、短段落和可用收获的笔记读者。
+- 开头：首屏回答 `这事为什么值得看` 或 `和我有什么关系`；从 `引用名人名言`、`提出疑问`、`言简意赅`、`使用数据`、`列举事例`、`描述场景`、`用对比` 中选择一种开头方法。
+- 结构：当用户要小红书帖子/笔记草稿而不是后端载荷时，输出为 `*标题*`、`*正文*`、`*📸首图建议*` 和 `*爆款词*`。句子短、口语、易扫读；只有感觉原生时才使用紧凑列表。
+- 语气：从 `幽默`、`愉快`、`激动`、`沉思`、`温馨`、`崇敬`、`轻松`、`热情`、`安慰`、`喜悦`、`欢乐`、`平和`、`肯定`、`质疑`、`鼓励`、`建议`、`真诚`、`亲切` 中选择一种。要像和读者近距离说话。主题适合时，可在标题和小节标记中用 emoji 增加能量。
+- 首图：始终给出具体首图建议。首图要让该主题在同类笔记中更有点击差异：产品/结果对比、关键场景、手写/标注截图、问题-方案对照、清单封面或强情绪瞬间。按笔记目的和主题定制。
+- 标签：从生成笔记中提取 3-6 个 SEO 关键词，转为原生 `#标签` 放在末尾。优先主题、城市/产品/受众、痛点和行动词。
+- 避免：`综上所述`、`值得注意的是`、`从某种程度上来说` 这类僵硬转场，以及长新闻报道式段落。
 
-### Zhihu
+#### 小红书二极管标题法
 
-- Audience: readers who expect a judgment, question framing, evidence, and reasoning.
-- Opening: begin with a clear answer, judgment, or question, then define what is known and unknown.
-- Structure: fact boundary, dispute points, cause analysis, tradeoffs, and conclusion.
-- Voice: reasoned and analytical, with less emotional push than Toutiao or Xiaohongshu.
-- Avoid: pretending certainty when sources are incomplete, and writing a lively gossip tone without analysis.
+除非用户明确要求安静或文学化标题，否则小红书笔记使用此标题法。
 
-## Style Matrix
+- 硬限制：所选标题尽量控制在 20 个中文字符以内；必须短、口语、有点击感。
+- 正刺激公式：`[产品/方法] + 快速效果 + 显著改变`，例如快速结果、可见改善或“终于解决”的瞬间。
+- 负刺激公式：`不行动的后果 + 你不XXX + 绝对会后悔/亏大了 + 紧迫感`，但必须真实，避免恐吓。
+- 心理钩子：使用损失厌恶、负面偏好、低努力收益、即时愉悦、悬念、挑战、热点、实用工具和具体结果。
+- 标点和 emoji：节制使用 `!`、`?`、`...`、`🔥`、`😭`、`✨` 或适合主题的 emoji，制造紧迫、惊喜或温度。
+- 自然适配时必须包含 1-2 个爆款词：`好用到哭`、`大数据`、`教科书般`、`小白必看`、`宝藏`、`绝绝子`、`神器`、`都给我冲`、`划重点`、`笑不活了`、`YYDS`、`秘方`、`我不允许`、`压箱底`、`建议收藏`、`停止摆烂`、`上天在提醒你`、`挑战全网`、`手把手`、`揭秘`、`普通女生`、`沉浸式`、`有手就能做`、`吹爆`、`好用哭了`、`搞钱必看`、`狠狠搞钱`、`打工人`、`吐血整理`、`家人们`、`隐藏`、`高级感`、`治愈`、`破防了`、`万万没想到`、`爆款`、`永远可以相信`、`被夸爆`、`手残党必备`、`正确姿势`。
+- 不要编造不可能效果、虚假紧迫、虚假数据或无来源个人经历。
 
-### Toutiao
+### 知乎
 
-#### Entertainment Gossip
+- 受众：期待判断、问题框架、证据和推理的读者。
+- 开头：先给清晰回答、判断或问题，再界定已知和未知。
+- 结构：事实边界、争议点、原因分析、权衡和结论。
+- 语气：理性分析，情绪推动少于今日头条或小红书。
+- 避免：来源不完整时假装确定，以及把知乎写成活泼八卦口吻。
 
-- Category: `entertainment`
-- Article type: `gossip_quick_commentary`
-- Length: 500-800 Chinese characters; hard maximum 1000 Chinese characters.
-- Voice: eating-melon quick commentary; lively, skeptical, and public-reaction aware.
-- Title strategy: foreground the person, conflict, reversal, latest response, or netizen dispute.
-- Opening: directly state the latest development and biggest hook in 100-150 characters.
-- Body rhythm: `发生了什么` -> `争议点` -> `网友反应` -> `可能影响`.
-- Ending: close with a clear view and a comment question.
-- Risk notes: do not write private facts, relationships, anonymous screenshots, or fan claims as verified facts. Use attribution such as `据公开报道`, `从目前信息看`, or omit weak claims.
+## 风格矩阵
 
-#### Society Hotspot
+### 今日头条
 
-- Category: `society`
-- Article type: `hotspot_commentary`
-- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
-- Voice: social livelihood commentary with ordinary-reader relevance; treat the account as focused on民生纠纷、劳动职场、家庭养老、消费住房、教育医疗, and practical risk avoidance rather than broad social miscellany.
-- Title strategy: show the event, contradiction, responsibility question, public concern, or practical consequence for workers, families, consumers, elderly people, tenants, owners, parents, or ordinary residents.
-- Opening: state the event and immediately answer why ordinary readers should care.
-- Body rhythm: event timeline, who may face the same problem, responsibility or rule boundary, practical risk/reminder, public emotion.
-- Ending: give a clear but moderate viewpoint; avoid slogan-like preaching.
-- Recommendation tactics: avoid copying mainstream media's same timeline angle; lead with a concrete stakeholder and consequence, then add a rule, responsibility, cost, or避坑 angle that makes the piece distinct enough to survive duplicate reduction.
+#### 娱乐八卦
 
-#### Tech And Finance
+- 类别：`entertainment`
+- 文章类型：`gossip_quick_commentary`
+- 语气：吃瓜式快速评论；活泼、怀疑、关注公众反应。
+- 标题策略：突出人物、冲突、反转、最新回应或网友争议。
+- 开头：在 100-150 字内直接写出最新进展和最大钩子。
+- 正文节奏：`发生了什么` -> `争议点` -> `网友反应` -> `可能影响`。
+- 结尾：给出清晰观点；只有公共争议自然邀请读者意见时才加评论问题。
+- 风险备注：不要把私密事实、关系、匿名截图或粉丝说法写成已核实事实。使用 `据公开报道`、`从目前信息看` 等归因，或删除弱说法。
 
-- Category: `tech_finance`
-- Article type: `plain_explainer`
-- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
-- Voice: plain-language explanation.
-- Title strategy: lead with user impact, price movement, product change, company competition, or industry consequence.
-- Opening: explain the newest change and who is affected.
-- Body rhythm: what changed, why it matters, who benefits/loses, what to watch next.
-- Ending: concise judgment with uncertainty if market or policy facts are incomplete.
+#### 社会热点
 
-#### Knowledge Explainer
+- 类别：`society`
+- 文章类型：`hotspot_commentary`
+- 语气：带普通读者相关性的社会民生评论；把账号视为聚焦民生纠纷、劳动职场、家庭养老、消费住房、教育医疗和实用避坑，而不是泛社会杂谈。
+- 标题策略：展示事件、矛盾、责任问题、公众关切，或对劳动者、家庭、消费者、老人、租客、业主、父母、普通居民的实际后果。
+- 开头：说明事件，并立即回答普通读者为什么该关心。
+- 正文节奏：事件时间线、谁可能遇到同样问题、责任或规则边界、实用风险/提醒、公众情绪。
+- 结尾：给出清晰但温和的观点；避免口号式说教。
+- 推荐策略：避免复制主流媒体同样的时间线角度；先写具体相关方和后果，再加入规则、责任、成本或避坑角度，让文章足够不同，能避开重复降权。
 
-- Category: `knowledge`
-- Article type: `question_answer_explainer`
-- Length: 800-1000 Chinese characters; hard maximum 1000 Chinese characters.
-- Voice: direct problem-solving explanation.
-- Title strategy: ask or answer a concrete reader question.
-- Opening: state the common confusion and short answer.
-- Body rhythm: answer, examples, common mistakes, final takeaway.
-- Ending: simple judgment or practical suggestion.
+#### 科技与财经
 
-### Baijiahao
+- 类别：`tech_finance`
+- 文章类型：`plain_explainer`
+- 语气：白话解释。
+- 标题策略：以用户影响、价格波动、产品变化、公司竞争或行业后果开头。
+- 开头：解释最新变化和受影响对象。
+- 正文节奏：发生了什么变化、为什么重要、谁受益/受损、接下来关注什么。
+- 结尾：简洁判断；市场或政策事实不完整时保留不确定性。
 
-#### Entertainment Gossip
+#### 知识解释
 
-- Category: `entertainment`
-- Article type: `entertainment_news_explainer`
-- Length: 700-1000 Chinese characters.
-- Voice: entertainment news interpretation, more explanatory than gossipy.
-- Title strategy: include searchable entity and event keywords; avoid vague emotional hooks.
-- Opening: state who, what, latest response, and why the topic is being searched.
-- Body rhythm: background, timeline, public response, verified risk boundary.
-- Ending: summarize what is confirmed and what still needs follow-up.
+- 类别：`knowledge`
+- 文章类型：`question_answer_explainer`
+- 语气：直接解决问题。
+- 标题策略：提出或回答具体读者问题。
+- 开头：写出常见困惑和简短答案。
+- 正文节奏：答案、例子、常见错误、最终收获。
+- 结尾：简单判断或实用建议。
 
-#### Society Hotspot
+### 百家号
 
-- Category: `society`
-- Article type: `structured_news_explainer`
-- Length: 1500-2200 Chinese characters.
-- Voice: structured social livelihood interpretation with practical value for ordinary readers.
-- Title strategy: use fact-forward wording with entity, event, affected group, and key responsibility or rule question.
-- Opening: provide the latest development, core fact, context, and why this matters to ordinary families, workers, consumers, or residents.
-- Body rhythm: timeline, background, responsibility/rule boundary, ordinary-reader impact, future attention point.
-- Ending: restrained commentary tied to facts.
+#### 娱乐八卦
 
-#### Tech And Finance
+- 类别：`entertainment`
+- 文章类型：`entertainment_news_explainer`
+- 长度：700-1000 个中文字符。
+- 语气：娱乐新闻解读，比八卦口吻更解释性。
+- 标题策略：包含可搜索实体和事件关键词；避免模糊情绪钩子。
+- 开头：写明谁、发生了什么、最新回应，以及为什么被搜索。
+- 正文节奏：背景、时间线、公众回应、已核实风险边界。
+- 结尾：总结已确认内容和仍需跟进之处。
 
-- Category: `tech_finance`
-- Article type: `search_friendly_explainer`
-- Length: 1500-2200 Chinese characters.
-- Voice: search-friendly explanation.
-- Title strategy: include core entity, product/company/market keyword, and reader question.
-- Opening: define the change or event in clear terms.
-- Body rhythm: definition, background, impact, trend, uncertainty.
-- Ending: summarize what readers should remember.
+#### 社会热点
 
-#### Knowledge Explainer
+- 类别：`society`
+- 文章类型：`structured_news_explainer`
+- 长度：1500-2200 个中文字符。
+- 语气：结构化社会民生解读，对普通读者有实用价值。
+- 标题策略：使用事实前置表述，包含实体、事件、受影响群体，以及关键责任或规则问题。
+- 开头：给出最新进展、核心事实、语境，以及它为什么影响普通家庭、劳动者、消费者或居民。
+- 正文节奏：时间线、背景、责任/规则边界、普通读者影响、未来关注点。
+- 结尾：紧扣事实的克制评论。
 
-- Category: `knowledge`
-- Article type: `evergreen_explainer`
-- Length: 1500-2200 Chinese characters.
-- Voice: encyclopedia-like but readable.
-- Title strategy: fit `是什么`, `为什么`, or `怎么办` searches.
-- Opening: answer the main question first.
-- Body rhythm: concept, reason, example, method, reminder.
-- Ending: short recap and practical note.
+#### 科技与财经
 
-### Xiaohongshu
+- 类别：`tech_finance`
+- 文章类型：`search_friendly_explainer`
+- 长度：1500-2200 个中文字符。
+- 语气：搜索友好的解释。
+- 标题策略：包含核心实体、产品/公司/市场关键词和读者问题。
+- 开头：用清楚语言定义变化或事件。
+- 正文节奏：定义、背景、影响、趋势、不确定性。
+- 结尾：总结读者应该记住的要点。
 
-#### Entertainment Gossip
+#### 知识解释
 
-- Category: `entertainment`
-- Article type: `sober_gossip_note`
-- Length: 400-700 Chinese characters.
-- Voice: clear-headed gossip note; conversational, fast, and skeptical.
-- Title strategy: use a sharp but clean hook around `这事为什么吵起来`, `反转点`, `路人观感`, or `别急着站队`.
-- Opening: first screen explains why the topic is noisy and what changed.
-- Body rhythm: short paragraphs, 3-5 compact points, observation before judgment.
-- Ending: comment-friendly question plus 3-6 topic tags.
-- Risk notes: do not pretend to have insider information; separate public facts, fan interpretation, and personal observation.
+- 类别：`knowledge`
+- 文章类型：`evergreen_explainer`
+- 长度：1500-2200 个中文字符。
+- 语气：像百科但可读。
+- 标题策略：适配 `是什么`、`为什么` 或 `怎么办` 类搜索。
+- 开头：先回答核心问题。
+- 正文节奏：概念、原因、例子、方法、提醒。
+- 结尾：短回顾和实用提示。
 
-#### Society Hotspot
+### 小红书
 
-- Category: `society`
-- Article type: `personal_observation_digest`
-- Length: 600-900 Chinese characters.
-- Voice: personal observation plus social livelihood information整理.
-- Title strategy: show emotional relevance, everyday impact, or a concrete避坑 reminder without fearmongering.
-- Opening: explain what happened and why it may hit ordinary people in work, family, housing, consumption, healthcare, education, or retirement.
-- Body rhythm: facts, personal observation, practical reminder, comment prompt.
-- Ending: fewer grand conclusions; more grounded empathy or caution.
+#### 娱乐八卦
 
-#### Tech And Finance
+- 类别：`entertainment`
+- 文章类型：`sober_gossip_note`
+- 长度：400-700 个中文字符。
+- 语气：清醒吃瓜笔记；口语、快速、保持怀疑。
+- 标题策略：围绕 `这事为什么吵起来`、`反转点`、`路人观感` 或 `别急着站队` 使用尖锐但干净的钩子。
+- 开头：首屏解释话题为什么吵，以及发生了什么变化。
+- 正文节奏：短段落、3-5 个紧凑点、先观察再判断。
+- 结尾：适合评论的收束或问题，加 3-6 个话题标签。
+- 风险备注：不要假装有内幕；区分公开事实、粉丝解读和个人观察。
 
-- Category: `tech_finance`
-- Article type: `life_relevance_explainer`
-- Length: 600-900 Chinese characters.
-- Voice: everyday-life explanation.
-- Title strategy: lead with `和我有什么关系`, price/usefulness, product experience, or consumer decision.
-- Opening: translate the event into everyday impact.
-- Body rhythm: what changed, what it affects, what to compare, what to watch.
-- Ending: practical takeaway and tags.
+#### 社会热点
 
-#### Knowledge Explainer
+- 类别：`society`
+- 文章类型：`personal_observation_digest`
+- 长度：600-900 个中文字符。
+- 语气：个人观察加社会民生信息整理。
+- 标题策略：展示情绪相关性、日常影响或具体避坑提醒，但不要制造恐慌。
+- 开头：解释发生了什么，以及它为什么可能打到普通人的工作、家庭、住房、消费、医疗、教育或退休。
+- 正文节奏：事实、个人观察、实用提醒、评论提示。
+- 结尾：少一点宏大结论，多一点落地共情或提醒。
 
-- Category: `knowledge`
-- Article type: `saveable_note`
-- Length: 600-1000 Chinese characters.
-- Voice: save-worthy note.
-- Title strategy: use a question, checklist, common misunderstanding, or quick guide.
-- Opening: tell readers what they will understand or solve.
-- Body rhythm: concise points, examples, mistakes, summary.
-- Ending: collection-friendly recap and topic tags.
+#### 科技与财经
 
-### Zhihu
+- 类别：`tech_finance`
+- 文章类型：`life_relevance_explainer`
+- 长度：600-900 个中文字符。
+- 语气：日常生活化解释。
+- 标题策略：以 `和我有什么关系`、价格/实用性、产品体验或消费决策开头。
+- 开头：把事件翻译成日常影响。
+- 正文节奏：发生了什么、影响什么、要比较什么、接下来关注什么。
+- 结尾：实用收获和标签。
 
-#### Entertainment Gossip
+#### 知识解释
 
-- Category: `entertainment`
-- Article type: `opinion_analysis`
-- Length: 900-1400 Chinese characters.
-- Voice: opinion analysis rather than gossip performance.
-- Title strategy: frame the real question behind the public argument.
-- Opening: give a judgment first, then define what is confirmed and what is uncertain.
-- Body rhythm: facts, dispute, public opinion, industry logic, conclusion.
-- Ending: explain why the topic triggered discussion and what should not be overread.
-- Risk notes: cite public information, avoid private speculation, and mark incomplete evidence clearly.
+- 类别：`knowledge`
+- 文章类型：`saveable_note`
+- 长度：600-1000 个中文字符。
+- 语气：值得收藏的笔记。
+- 标题策略：使用问题、清单、常见误区或快速指南。
+- 开头：告诉读者将理解或解决什么。
+- 正文节奏：简洁要点、例子、错误、总结。
+- 结尾：适合收藏的回顾和话题标签。
 
-#### Society Hotspot
+### 知乎
 
-- Category: `society`
-- Article type: `rational_hotspot_analysis`
-- Length: 1500-2500 Chinese characters.
-- Voice: rational social livelihood analysis with clear fact boundaries and ordinary-reader relevance.
-- Title strategy: ask the responsibility, mechanism, public-interest, or ordinary-person rights question.
-- Opening: state the answer or core judgment before expanding, then define how the issue connects to work, consumption, housing, family, healthcare, education, retirement, or public services.
-- Body rhythm: fact boundary, responsibility/rule boundary, system context, ordinary-reader impact, public psychology, practical takeaway.
-- Ending: balanced conclusion with concrete limits.
+#### 娱乐八卦
 
-#### Tech And Finance
+- 类别：`entertainment`
+- 文章类型：`opinion_analysis`
+- 长度：900-1400 个中文字符。
+- 语气：观点分析，而不是表演式吃瓜。
+- 标题策略：框出公共争议背后的真实问题。
+- 开头：先给判断，再界定已确认和不确定内容。
+- 正文节奏：事实、争议、舆论、行业逻辑、结论。
+- 结尾：解释话题为什么引发讨论，以及什么不该过度解读。
+- 风险备注：引用公开信息，避免隐私猜测，并清楚标注证据不完整处。
 
-- Category: `tech_finance`
-- Article type: `causal_chain_analysis`
-- Length: 1800-2800 Chinese characters.
-- Voice: causal-chain analysis.
-- Title strategy: focus on why the event happened and what it changes.
-- Opening: answer whether the event is important and for whom.
-- Body rhythm: mechanism, business logic, market or policy context, long-term impact, uncertainty.
-- Ending: clear conclusion plus what evidence would change the view.
+#### 社会热点
 
-#### Knowledge Explainer
+- 类别：`society`
+- 文章类型：`rational_hotspot_analysis`
+- 长度：1500-2500 个中文字符。
+- 语气：理性社会民生分析，有清楚事实边界和普通读者相关性。
+- 标题策略：提出责任、机制、公共利益或普通人权利问题。
+- 开头：先给答案或核心判断，再说明议题如何连接工作、消费、住房、家庭、医疗、教育、退休或公共服务。
+- 正文节奏：事实边界、责任/规则边界、系统语境、普通读者影响、公众心理、实用收获。
+- 结尾：有具体限制条件的平衡结论。
 
-- Category: `knowledge`
-- Article type: `question_answer_argument`
-- Length: 1500-2500 Chinese characters.
-- Voice: question-answer reasoning.
-- Title strategy: use a direct question that matches user curiosity.
-- Opening: answer the question first.
-- Body rhythm: thesis, evidence, counterexample, explanation, conclusion.
-- Ending: concise view and usable takeaway.
+#### 科技与财经
 
-## Humanizing Pass
+- 类别：`tech_finance`
+- 文章类型：`causal_chain_analysis`
+- 长度：1800-2800 个中文字符。
+- 语气：因果链分析。
+- 标题策略：聚焦事件为何发生，以及它改变了什么。
+- 开头：回答事件是否重要、对谁重要。
+- 正文节奏：机制、商业逻辑、市场或政策语境、长期影响、不确定性。
+- 结尾：清晰结论，并说明什么证据会改变判断。
 
-Rewrite after the first draft:
+#### 知识解释
 
-- Keep the selected platform and article-type profile intact.
-- Replace generic transitions with natural sentence-level connections.
-- Cut repetitive summaries and obvious filler.
-- Vary paragraph length according to the selected platform.
-- Add concrete nouns and verbs from the source pack.
-- Keep a human editorial stance, but do not add unsupported facts.
-- Preserve legal risk boundaries and uncertainty markers.
-- Remove AI tells: `在当今社会`, `不可忽视的是`, `这无疑`, repeated `引发了广泛关注`, and `我们应该理性看待` as a lazy ending.
+- 类别：`knowledge`
+- 文章类型：`question_answer_argument`
+- 长度：1500-2500 个中文字符。
+- 语气：问答式推理。
+- 标题策略：使用匹配用户好奇心的直接问题。
+- 开头：先回答问题。
+- 正文节奏：论点、证据、反例、解释、结论。
+- 结尾：简洁观点和可用收获。
+
+## 去 AI 改写
+
+第一版草稿后执行改写：
+
+- 保留选定平台和文章类型档案。
+- 用自然句间连接替换模板转场。
+- 删除重复总结和明显填充。
+- 按选定平台调整段落长短。
+- 从信源包中加入具体名词和动词。
+- 保持人的编辑立场，但不添加无来源事实。
+- 保留法律风险边界和不确定性标记。
+- 删除 AI 痕迹：`在当今社会`、`不可忽视的是`、`这无疑`、重复的 `引发了广泛关注`，以及把 `我们应该理性看待` 当作偷懒结尾。

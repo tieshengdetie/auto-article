@@ -1,34 +1,36 @@
-# Auto Article API
+# auto-article 接口
 
-## Backend Base URL
+## 后端基准 URL
 
-Read the backend base URL from the user, current workspace config, or an environment variable such as `AUTO_ARTICLE_BASE_URL`. Do not assume the backend is deployed locally. For a deployed service, set the real origin, for example:
+从用户、当前工作区配置或 `AUTO_ARTICLE_BASE_URL` 等环境变量读取后端基准 URL。不要假设后端一定部署在本地。部署服务应设置真实来源，例如：
 
 `AUTO_ARTICLE_BASE_URL=https://api.example.com`
 
-Local development fallback is usually:
+本地开发兜底通常是：
 
 `AUTO_ARTICLE_BASE_URL=http://localhost:9001`
 
-Never connect to MySQL directly from this skill.
+本地后端直连要绕过代理：当基准 URL 是 `localhost`、`127.0.0.1`、`::1` 或明确的本机开发地址时，优先改用 `http://127.0.0.1:<port>`。如果请求返回 `502 Bad Gateway`、代理连接错误，或环境变量存在 `http_proxy`、`https_proxy`、`all_proxy` 指向本机代理，只在本次保存命令进程里临时清空这些代理变量，并设置 `no_proxy=localhost,127.0.0.1,::1` 后重试。不要全局修改用户代理配置；远程部署 URL 仍按用户提供的地址请求。
 
-## Create Skill Article
+本技能绝不要直接连接 MySQL。
+
+## 创建技能文章
 
 `POST /api/v1/skill-articles`
 
-Required fields for the backend:
+后端必需字段：
 
-- `platform`: `toutiao`, `baijiahao`, `xiaohongshu`, or `zhihu`
+- `platform`：`toutiao`、`baijiahao`、`xiaohongshu` 或 `zhihu`
 - `keyword`
 - `title`
 - `markdownContent`
 
-Required fields for this skill before saving:
+本技能保存前额外要求：
 
-- `coverImageUrl`: must point to a real downloaded/uploaded raster image under `/static/article-images/uploads/...`
-- at least one Markdown image in `markdownContent`
+- `coverImageUrl`：必须指向 `/static/article-images/uploads/...` 下真实下载或上传的栅格图片
+- `markdownContent` 中至少包含一张 Markdown 图片
 
-Recommended fields:
+推荐字段：
 
 ```json
 {
@@ -44,11 +46,11 @@ Recommended fields:
 }
 ```
 
-The backend stores only the generated article fields needed by the web page. Keep source packs, style profiles, model metadata, humanizer status, and publishing state in working notes instead of sending them to the API.
+后端只保存网页需要展示的生成文章字段。信源包、风格档案、模型元数据、去 AI 状态和发布状态保留在工作笔记中，不要发送给 API。
 
-## Fast Save Command
+## 快速保存命令
 
-Prefer the repository-level entrypoint, which delegates to the bundled save script instead of writing new code or inspecting backend files:
+优先使用仓库级入口。它会委托给捆绑保存脚本，避免写新代码或检查后端文件：
 
 ```powershell
 .\scripts\save-skill-article.ps1 C:\tmp\auto-media-writer\demo.payload.json -DryRun
@@ -60,49 +62,49 @@ make validateSkillArticle PAYLOAD=/tmp/auto-media-writer/demo.payload.json
 make saveSkillArticle PAYLOAD=/tmp/auto-media-writer/demo.payload.json BASE_URL=http://localhost:9001
 ```
 
-Prefer passing the constructed payload JSON through stdin by using `-` as the payload argument. This avoids creating a `payload.json` file at all:
+优先通过标准输入传入构造好的载荷 JSON，并用 `-` 作为载荷参数。这样完全避免创建 `payload.json` 文件：
 
 ```sh
 python skills/auto-media-writer/scripts/save_skill_article.py -
 ```
 
-Set the backend explicitly when it is not local:
+非本地后端必须显式设置：
 
 ```sh
 python skills/auto-media-writer/scripts/save_skill_article.py - --base-url https://api.example.com
 ```
 
-The script validates with `scripts/validate_skill_article_payload.py` before sending `POST /api/v1/skill-articles`. Validation checks required article fields, `titleOptions` JSON encoding, and local image file existence for `coverImageUrl` and Markdown image URLs. Use `--dry-run` to validate and preview the target URL without saving.
+脚本会先用 `scripts/validate_skill_article_payload.py` 校验，再发送 `POST /api/v1/skill-articles`。校验会检查必需文章字段、`titleOptions` 的 JSON 编码，以及 `coverImageUrl` 和 Markdown 图片 URL 对应的本地图片文件是否存在。使用 `--dry-run` 可只校验并预览目标 URL，不保存。
 
-If shell/stdin handling is impractical, write the transient payload JSON file outside the repository, for example `C:\tmp\auto-media-writer\<task-id>.payload.json` on Windows or `/tmp/auto-media-writer/<task-id>.payload.json` on Unix-like systems. Do not create or leave `payload.json`, `payload_draft.json`, or similar temporary article files in the project root or skill directory. Delete the temporary payload after save or dry-run validation unless the user explicitly asks to keep it.
+如果 shell 或标准输入处理不方便，把临时载荷 JSON 写到仓库外，例如 Windows 的 `C:\tmp\auto-media-writer\<task-id>.payload.json` 或 Unix 类系统的 `/tmp/auto-media-writer/<task-id>.payload.json`。不要在项目根目录或技能目录创建或留下 `payload.json`、`payload_draft.json` 等临时文章文件。保存或试运行校验后删除临时载荷，除非用户明确要求保留。
 
-When running outside the repository root, pass the uploads directory explicitly:
+在仓库根目录外运行时，显式传入上传目录：
 
 ```sh
 python skills/auto-media-writer/scripts/save_skill_article.py - --static-root backend/static/article-images/uploads
 ```
 
-Do not connect to MySQL, read DAO/model/service code, or write a one-off Python database insertion script for article saving.
+不要为了保存文章而连接 MySQL、读取 DAO/model/service 代码，或编写一次性 Python 数据库插入脚本。
 
-## List Skill Articles
+## 列出技能文章
 
 `GET /api/v1/skill-articles?page=1&pageSize=8&platform=toutiao&keyword=...`
 
-## Get Skill Article
+## 获取技能文章
 
 `GET /api/v1/skill-articles/:id`
 
-## Update Skill Article
+## 更新技能文章
 
 `PUT /api/v1/skill-articles/:id`
 
-Use this for manual edits, image changes, or re-humanized content.
+用于人工编辑、替换图片或重新去 AI 后的内容更新。
 
-## Upload Local Article Image
+## 上传本地文章图片
 
 `POST /api/v1/skill-articles/upload-image`
 
-Use multipart form data with an `image` file field. The backend saves the image under `backend/static/article-images/uploads/yyyy/mm/` and returns a public static path:
+使用 multipart 表单数据，并用 `image` 作为文件字段。后端会把图片保存到 `backend/static/article-images/uploads/yyyy/mm/`，并返回公开静态路径：
 
 ```json
 {
@@ -112,4 +114,4 @@ Use multipart form data with an `image` file field. The backend saves the image 
 }
 ```
 
-Insert the returned `url` into Markdown instead of embedding base64 data.
+把返回的 `url` 插入 Markdown，不要嵌入 base64 数据。

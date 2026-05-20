@@ -55,3 +55,7 @@ Git history is not available in this checkout, so use concise imperative commit 
 ## Security & Configuration Tips
 
 Do not commit secrets, private credentials, or environment-specific production values. Review changes to `application.*.yml`, Kafka certificates, Redis/MySQL settings, and auth middleware carefully. Keep local-only overrides outside the repository or document them in the PR without exposing sensitive values.
+
+## Windows Shell Notes
+
+This workspace runs under PowerShell on Windows. Do not use CMD-style redirection to `nul` or Unix `dir /b` patterns in repo commands; they can create a literal `nul` file in the project root when interpreted by the wrong shell. Prefer PowerShell-native forms such as `Out-Null`, assigning to `$null`, or `Get-ChildItem`.

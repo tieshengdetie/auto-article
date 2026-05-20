@@ -12,6 +12,17 @@ from urllib.request import Request, urlopen
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
+class ChineseArgumentParser(argparse.ArgumentParser):
+    def format_help(self):
+        return (
+            super().format_help()
+            .replace("usage:", "用法:")
+            .replace("positional arguments:", "位置参数:")
+            .replace("options:", "选项:")
+            .replace("show this help message and exit", "显示帮助并退出")
+        )
+
+
 def fetch(url: str, timeout: int = 15):
     req = Request(url, headers={"User-Agent": "Mozilla/5.0 auto-media-writer"})
     return urlopen(req, timeout=timeout)
@@ -36,7 +47,7 @@ def infer_extension(image_url: str, content_type: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = ChineseArgumentParser(description="下载图片搜索候选结果并生成本地静态地址。")
     parser.add_argument("--image-url", action="append", required=True)
     parser.add_argument("--task-id", required=True)
     parser.add_argument("--static-root", default="backend/static/article-images/uploads")
@@ -63,10 +74,10 @@ def main() -> int:
                 data = resp.read()
                 content_type = resp.headers.get("Content-Type", "")
         except Exception as exc:
-            print(f"warning: failed to fetch image {image_url}: {exc}", file=sys.stderr)
+            print(f"警告：获取图片失败 {image_url}: {exc}", file=sys.stderr)
             continue
         if len(data) < 20_000:
-            print(f"warning: skipped too-small image {image_url}", file=sys.stderr)
+            print(f"警告：跳过过小图片 {image_url}", file=sys.stderr)
             continue
         ext = infer_extension(image_url, content_type)
         name = hashlib.sha1(image_url.encode("utf-8")).hexdigest()[:16] + ext

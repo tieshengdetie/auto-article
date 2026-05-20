@@ -1,209 +1,192 @@
 ---
 name: auto-media-writer
-description: Generate Chinese self-media articles for Toutiao, Baijiahao, Xiaohongshu, or Zhihu from user-provided keywords or selected hot topics. Use when Codex needs to segment Chinese keywords, research latest internet and TianAPI news with a compact source pack, collect and locally save suitable images, apply platform-by-article-type writing style profiles, fall back to image search or AI-generated raster images, call humanizer-zh before saving, validate and save a minimal article record to the auto-article backend through the fixed HTTP API/script path, or plan daily self-media article topics from hot lists across platforms.
+description: 为今日头条、百家号、小红书或知乎生成中文自媒体内容。适用于根据用户关键词或热点选题进行中文分词、检索最新互联网与 TianAPI 新闻、整理精简信源包、收集并本地保存配图、套用平台与文章类型风格、区分今日头条微头条与长文章、在保存前调用 humanizer-zh 去除 AI 痕迹、通过固定 HTTP API 或脚本验证并保存最小文章记录到 auto-article 后端，以及根据各平台热榜规划每日选题。
 ---
 
-# Auto Media Writer
+# 自媒体文章写作
 
-## Iron Rules
+## 铁律
 
-- Toutiao articles must not exceed 1000 Chinese characters. This is a hard platform requirement: selected `title`, `summary`, image captions, and metadata are not counted, but the final Markdown body text for Toutiao must be edited down to 1000 Chinese characters or less before humanization, re-checked after humanization, and trimmed again before saving if needed.
-- Toutiao drafts must be treated as one-shot publish candidates: check title, body, images, factual wording, sensitive wording, and Markdown before saving. Avoid avoidable post-publish edits because repeated edits after review can hurt recommendation.
-- Never save an article to the auto-article backend before calling `humanizer-zh`. The de-AI pass is mandatory, not optional. If `humanizer-zh` is not installed, automatically search for and install it with the skill installation workflow, then continue only after it is available in the active session. If it cannot be installed or loaded, stop before database insertion and tell the user what blocked installation.
-- Never save an article without images. If cited source articles contain body images, download those images to `backend/static/article-images/uploads/<yyyy>/<mm>/<task-id>/` and insert their local `/static/article-images/uploads/...` URLs into the Markdown. If an image later looks unsuitable, the user will review and replace it manually; do not omit images for that reason.
-- Never invent local image paths. A Markdown image such as `![alt](/static/article-images/uploads/yyyy/mm/task/file.jpg)` is valid only after that exact file exists under the backend static uploads directory or after the backend upload API returned that URL. Do not create plausible filenames by hand.
-- If source articles have no usable images or image downloads fail, search the open web for relevant images using the article keywords before falling back to AI generation. Download selected search results to the same local uploads directory and insert those local URLs into the article.
-- Generate concrete raster fallback images (`png`, `jpg`, or `webp`) only after both source-image download and keyword-based internet image search fail. Never use SVG placeholders.
-- If image collection, downloading, conversion, or generation is likely to take a long time, pause and tell the user what will take time, how many images are needed, and whether the likely bottleneck is download, image search, or AI generation. Ask whether to continue image processing. If the user declines, return a text draft or planning result only and do not save the article to the backend.
-- Do not create article payload files unless a file is genuinely needed for audit or manual replay. Prefer passing the constructed payload JSON directly to the save/validation scripts through stdin (`-`). If a temporary payload file is unavoidable, write it outside the repository and delete it after save or dry-run validation. Never leave `payload.json`, `payload_draft.json`, or similar article payload files in the project or skill directory.
+- 保存到 auto-article 后端前必须完成：确认平台和体裁、核实关键事实、准备真实本地图片、调用 `humanizer-zh`、校验最小载荷。
+- 今日头条必须设置 `toutiaoContentForm`：用户说“微头条、短评、短内容、快速评论”时用 `microtoutiao`；说“文章、长文、深度、1000-1200 字、民生热点类、热点评论赛道”时用 `article`；只说“今日头条”且无法推断时询问一次。
+- 今日头条长度总规则：`microtoutiao` 正文推荐 200-800 个中文字符，硬上限 1000；`article` 正文 1000-1200 个中文字符。调用 `humanizer-zh` 前后都要检查。
+- 保存前必须调用 `humanizer-zh`。如果缺失，按技能安装流程处理；如果仍不可用，停止入库并说明阻塞原因。
+- 禁止保存无图文章，禁止虚构本地图片路径。Markdown 图片必须指向已存在的本地上传文件或后端上传接口返回的真实地址；兜底图只能是 `png`、`jpg` 或 `webp`。
+- 除非确实需要审计或人工重放，不要创建文章载荷文件。优先用标准输入把 JSON 交给校验/保存脚本；临时文件必须放在仓库外并在保存或试运行后删除。
 
-## Core Workflow
+## 核心流程
 
-1. Resolve the target platform. Require one of `toutiao`, `baijiahao`, `xiaohongshu`, or `zhihu`; ask the user only if it is missing or ambiguous.
-2. Resolve the topic path:
-   - If the user provides keywords, segment them first, then research each meaningful segment independently before combining results.
-   - If the user asks what to write, collect hot topics from internet search and TianAPI MCP hot lists, present 5-10 topic options, and wait for the user to choose. After the user chooses, restart the keyword segmentation and research workflow with that chosen keyword.
-3. Segment keywords into at most 5 meaningful search terms: entity, event, time clue, audience intent, and controversy/angle. Keep only terms that change the search result. Example: `某明星离婚风波` -> `某明星`, `离婚`, `回应`, `网友热议`.
-4. Research the main combined phrase plus the 2-3 strongest segments first. Expand to more segments only when source facts are thin, stale, or contradictory. Query TianAPI MCP only for freshness, corroboration, or hot-list planning instead of mirroring every web search. Useful TianAPI tools include hot lists (`networkhot`, `nethot`, `weibohot`, `douyinhot`, `toutiaohot`, `wxhottopic`) and news search (`allnews`, `generalnews`).
-5. Merge useful information into a compact source pack. Keep 2-4 best sources total for normal articles and 5-6 only for complex society/finance topics. For each source, keep only title, URL, source, publish time, 1-2 verified facts, image URL candidates, and reliability notes. Remove duplicate, low-quality, stale, or unsupported claims. Do not invent facts, quotes, data, or dates absent from sources.
-6. Classify the article automatically. Use `entertainment` for celebrity/film/TV/influencer gossip and public reactions; use `society` for broad social news, especially social livelihood topics about ordinary people's rights, disputes, work, retirement, family, consumption, housing, healthcare, education, and practical risk avoidance; use `tech_finance` for technology, business, consumer products, AI, finance, markets, companies, or industry competition; use `knowledge` for evergreen explainers, how-to, education, culture, health, workplace, or other non-breaking explanatory topics; otherwise choose `general`. Ask the user when the category changes the writing direction and remains uncertain.
-7. Select the style profile before drafting. Read `references/platform-style.md`, combine the selected platform with the selected category/article type, and follow that profile for title strategy, opening hook, paragraph rhythm, length, ending, and risk boundaries. Use the platform baseline first, then layer the article-type profile; when they conflict, platform distribution logic wins, and verified facts/legal risk boundaries override all style choices.
-8. Draft the article for the selected platform and article type, integrating the source pack into a coherent self-media article instead of summarizing search results mechanically. Make the title and opening more eye-catching when the facts support it, but never turn rumors into facts or add unsupported private details.
-9. Prepare images using `references/image-policy.md`. First download usable body images from cited source articles. If none are usable or downloads fail, search the internet for images using the segmented keywords and article angle, select editorially relevant results, download them to the local uploads directory, and reference their local URLs. Use AI raster generation only when both source images and keyword-based image search fail. Insert Markdown image tags at suitable positions. Do not save an image-free article.
-10. Before saving, call `humanizer-zh`. Pass the drafted Markdown article plus only the selected platform, category, target length, chosen title options, compact style profile, and essential source-fact constraints. Require `humanizer-zh` to preserve verified facts, URLs, dates, names, Markdown headings, image markers, and legal risk boundaries while removing AI-sounding transitions, template paragraphs, generic moralizing, and over-balanced phrasing.
-11. Create a minimal article payload object using `references/auto-article-api.md`. Prefer validating and saving that JSON through stdin (`-`) without writing a payload file. If a JSON handoff file is needed, write it outside the repository, such as an OS temp directory or `C:\tmp\auto-media-writer\`, never under `skills/auto-media-writer/` and never as a lingering `payload.json` or `payload_draft.json` in the project tree. Delete temporary payload files after saving or dry-run validation.
-12. Save through the low-freedom fast path: when working inside this repository, prefer the repository-level entrypoint (`scripts/save-skill-article.ps1`, `scripts/save-skill-article.sh`, or `make saveSkillArticle`) that delegates to `scripts/save_skill_article.py`; otherwise use `scripts/save_skill_article.py` directly or make the exact documented HTTP `POST /api/v1/skill-articles`. Do not inspect backend source files, connect to MySQL, or write one-off database insertion scripts.
-13. Record any improvement learned during use in this skill before future runs when the user asks the skill to evolve.
+1. 确定目标平台。必须是 `toutiao`、`baijiahao`、`xiaohongshu` 或 `zhihu` 之一；只有缺失或含糊时才询问用户。平台是 `toutiao` 时同时确定 `toutiaoContentForm`。
+2. 确定选题路径：
+   - 用户提供关键词时，先分词，再分别调研每个有意义片段，最后合并信息。
+   - 用户询问写什么时，结合互联网搜索和 TianAPI MCP 热榜收集热点，给出 5-8 个选题选项并等待用户选择。用户选定后，用该关键词重新执行分词和调研流程。
+3. 把关键词拆成最多 5 个有意义搜索词：实体、事件、时间线索、受众意图、争议/角度。只保留会改变搜索结果的词。例如：`某明星离婚风波` -> `某明星`、`离婚`、`回应`、`网友热议`。
+4. 先调研主组合词和 2-3 个最强片段。只有在信源事实薄弱、过旧或互相矛盾时才扩展更多片段。TianAPI MCP 只用于新鲜度、交叉印证或热榜规划，不要机械复制每次网络搜索。常用 TianAPI 工具包括热榜（`networkhot`、`nethot`、`weibohot`、`douyinhot`、`toutiaohot`、`wxhottopic`）和新闻搜索（`allnews`、`generalnews`）。
+5. 合并有用信息为精简信源包。普通文章保留 2-4 个最佳来源，复杂社会/财经主题才保留 5-6 个。每个来源只记录标题、URL、来源、发布时间、1-2 条已核实事实、候选图片 URL 和可信度备注。删除重复、低质、过期或无支撑的说法。不要编造来源中没有的事实、引语、数据或日期。
+6. 自动分类文章。明星、影视、网红八卦及公众反应用 `entertainment`；广义社会新闻尤其普通人权益、纠纷、工作、退休、家庭、消费、住房、医疗、教育和风险避坑用 `society`；科技、商业、消费产品、AI、金融、市场、公司或行业竞争用 `tech_finance`；常青解释、教程、教育、文化、健康、职场等非突发解释型内容用 `knowledge`；其他用 `general`。只有分类会明显改变写法且仍不确定时才询问用户。
+7. 起草前读取 `references/platform-style.md`，按平台、`toutiaoContentForm`、类别和文章类型选择风格档案。冲突时优先级为：已核实事实和法律风险边界 > 平台分发逻辑 > 文章类型 > 用户语气偏好。
+8. 为选定平台和文章类型起草文章。把信源包整合成连贯的自媒体文章，不要机械总结搜索结果。事实支持时可以让标题和开头更抓人，但不能把传闻写成事实，也不能添加无来源的隐私细节。
+9. 按 `references/image-policy.md` 准备图片，优先来源图，其次关键词搜索图，最后 AI 栅格兜底图。只有文件真实落到本地上传目录后，才能把 URL 插入 Markdown。
+10. 保存前调用 `humanizer-zh`。只传入草稿 Markdown、选定平台、类别、目标长度、标题选项、精简风格档案和必要事实约束。要求 `humanizer-zh` 保留已核实事实、URL、日期、名称、Markdown 标题、图片标记和法律风险边界，同时去掉 AI 感转场、模板段落、泛泛说教和过度平衡表述。
+11. 按 `references/auto-article-api.md` 构造最小文章载荷对象，优先用标准输入（`-`）校验和保存 JSON。
+12. 用低自由度快速路径保存：在本仓库内工作时，优先使用仓库级入口（`scripts/save-skill-article.ps1`、`scripts/save-skill-article.sh` 或 `make saveSkillArticle`）；否则直接使用 `scripts/save_skill_article.py`，或按文档发送精确的 HTTP `POST /api/v1/skill-articles`。
+13. 当用户要求技能继续演进时，把使用中学到的改进沉淀回本技能。
 
-## Topic And Research Rules
+## 选题与调研规则
 
-- Always segment user-provided Chinese keywords before research, but cap the first search pass at one combined phrase plus 2-3 strongest segments. Expand only when necessary.
-- For each segment, prefer latest credible sources. Capture concrete dates for recent events and distinguish verified facts from commentary, rumors, and platform reactions.
-- For daily planning, compare hot lists across Baidu, Weibo, Douyin, WeChat, Toutiao, all-network hot lists, and broad web news. Rank options by recency, discussion heat, source availability, platform fit, image availability, and legal risk. Present 5-8 choices with one short reason for each.
-- For social livelihood planning, treat the account direction as `社会民生实用评论`: focus on ordinary-reader relevance, public responsibility, and practical consequences rather than generic social news. Prefer topics in four stable lanes:民生纠纷（物业、邻里、消费、食品安全、服务投诉）, 劳动职场（欠薪、裁员、社保、劳动仲裁、灵活就业）, 家庭养老（赡养、养老金、看病、婚姻财产、子女矛盾）, and 社会热点复盘（only when the event connects to ordinary people's rules, risks, or daily choices）.
-- For social livelihood topics, use a 70/20/10 selection mix unless the user says otherwise: 70% fixed account lane, 20% adjacent public-interest hotspots, and 10% experimental subtopics such as local livelihood, retirement, workplace, or consumer protection. Reject topics that are only奇闻,猎奇, celebrity gossip, vague outrage, pure crime spectacle, or disconnected from the account's recurring reader need.
-- For Toutiao social livelihood topics, select stories that can pass all four recommendation filters: broad enough audience, low enough duplicate pressure, still inside a useful time window, and clearly tied to the account's vertical label. If a hot topic is oversupplied, only keep it when the angle is distinctive, such as `普通人会遇到的坑`, `责任到底归谁`, `这条规则很多人不知道`, or `为什么小城市/普通家庭更关心`.
-- Prefer topics with a visible everyday stakeholder: workers, renters, owners, consumers, parents, elderly people, patients, students, small merchants, or ordinary residents. Avoid cold policy trivia, isolated奇闻, pure crime details, and cases that cannot be generalized into rights, responsibility, cost, procedure, or risk.
-- Use internet search as the primary source. Use TianAPI MCP when web results are delayed, inaccessible, or need corroboration. If TianAPI provides the freshest relevant item, use it as the lead but still seek at least one corroborating source when possible.
-- Reuse the same entity and event keywords for image-search fallback. Combine the main subject with scene qualifiers such as `scene`, `editorial photo`, `event photo`, `product photo`, `press event`, `still`, or `concept art` so the searched images stay editorially relevant.
-- Keep source URLs in working notes and cite them in the article when useful, but do not send bulky source metadata to the backend article record. If source URLs include usable images, prefer them unless watermarked, copyrighted, low quality, or unavailable.
-- Include concrete dates when discussing recent events.
+- 调研前必须先拆分用户提供的中文关键词，但第一轮搜索控制在一个组合词加 2-3 个最强片段内。只有必要时才扩展。
+- 每个片段都优先选择最新可信来源。讨论近期事件时记录具体日期，并区分已核实事实、评论、传闻和平台反应。
+- 日常选题规划要比较百度、微博、抖音、微信、今日头条、全网热榜和广泛网络新闻。按时效、讨论热度、信源可得性、平台适配、图片可得性和法律风险排序。给出 5-8 个选项，每个选项一句短理由。
+- 社会民生选题聚焦 `社会民生实用评论`：民生纠纷、劳动职场、家庭养老、消费住房、教育医疗，以及能连接普通人规则、责任、成本、流程或风险的社会热点复盘。剔除纯奇闻、猎奇、明星八卦、模糊愤怒和无法核实的题目。
+- 今日头条社会民生主题要通过四个过滤器：受众足够广、重复压力足够低、仍在时效窗内、与账号垂直标签清晰相关。若热点已被大量覆盖，改成责任边界、普通人成本、流程提醒或风险避坑角度。
+- 互联网搜索是主要来源。TianAPI MCP 用于网页结果延迟、不可访问或需要交叉印证时。如果 TianAPI 给出最新相关条目，可作为主线，但仍尽量寻找至少一个可印证来源。
+- 工作笔记中保留来源 URL，并在文章中视情况引用；但不要把臃肿信源元数据发送到后端文章记录。如果来源 URL 有可用图片，优先使用，除非有水印、版权风险、低质量或不可访问。
+- 讨论近期事件时必须写明具体日期。
 
-## Cost Controls
+## 成本控制
 
-- Default source budget: 2-4 sources total, 1-2 verified facts per source, and no long pasted excerpts.
-- Default search budget: one combined query plus 2-3 segment queries. Stop once the timeline, main dispute, and image path are clear.
-- Default hot-topic planning budget: 5-8 options, one-line rationale, no long source pack until the user chooses a topic.
-- Default image budget: one cover image and 1-2 inline images. Use 2-3 inline images only when the platform/article length benefits from them.
-- Keep style profile, source constraints, and humanizer instructions compact; do not pass the full style matrix or full source pack into the humanizer.
+- 默认信源预算：总共 2-4 个来源，每个来源 1-2 条已核实事实，不粘贴长摘录。
+- 默认搜索预算：一个组合查询加 2-3 个片段查询。一旦时间线、核心争议和图片路径清楚就停止。
+- 默认热榜选题预算：5-8 个选项，一行理由；用户选题前不做长信源包。
+- 默认图片预算：1 张封面图和 1-2 张正文图。只有平台或文章长度确实受益时才用 2-3 张正文图。
+- 风格档案、事实约束和去 AI 指令保持精简；不要把完整风格矩阵或完整信源包传给 `humanizer-zh`。
 
-## Topic Planning Mode
+## 选题规划模式
 
-When the user asks for article ideas, daily topic planning, or says they do not know what to write:
+当用户请求文章创意、每日选题，或表示不知道写什么时：
 
-1. Fetch current hot topics from internet search and TianAPI MCP hot-list tools when available.
-2. If the user asks for `社会民生`, `社会类`, `民生`, `普通人权益`, or similar directions, narrow the candidate pool to the social livelihood account direction before ranking. Prioritize topics that can be framed as `事件 -> 普通人会遇到什么 -> 规则/责任/避坑 -> 讨论问题`.
-3. Compare topics across platforms and remove entries that lack credible sources, are too risky, cannot support images, are overly cold, are oversupplied by duplicate hotspot takes, have very short shelf life with no follow-up value, or would dilute the account's vertical label.
-4. Return 5-8 topic options with suggested keywords, platform fit, likely category, social-livelihood lane when relevant, why it is hot, reader relevance, source availability, and image availability.
-5. Wait for the user to choose a topic or keyword. After selection, run the normal keyword segmentation, research, style-profile selection, image, humanization, and save workflow.
+1. 可用时，从互联网搜索和 TianAPI MCP 热榜工具获取当前热点。
+2. 如果用户要求 `社会民生`、`社会类`、`民生`、`普通人权益` 或类似方向，先按社会民生选题规则收窄候选池。
+3. 比较各平台热点，删除缺少可信信源、风险过高、无法支撑图片、过冷、重复热点稿过多、生命周期太短且没有后续价值，或会稀释账号垂直标签的条目。
+4. 返回 5-8 个选题选项，包含建议关键词、平台适配、可能类别、相关社会民生赛道、为什么热、读者相关性、信源可得性和图片可得性。
+5. 等待用户选择主题或关键词。选择后执行正常的分词、调研、风格选择、图片、去 AI 和保存流程。
 
-## Platform And Style Defaults
+## 平台与风格默认值
 
-- Always read `references/platform-style.md` before drafting platform-specific content. It contains the authoritative platform x article-type matrix.
-- Default tone level: eye-catching but compliant. Use conflict, contrast, suspense, public reaction, and timeline hooks when supported by sources; do not use clickbait that invents facts or implies unverified guilt.
-- When generating `title` and `titleOptions`, keep every title no more than 30 Chinese characters, then apply `Proven High-Read Title Patterns` from `references/platform-style.md`: prefer concrete named entities, verified numbers, two-part punctuation, contrast/reversal, public quotes only when sourced, and human-visible consequences for tech, finance, consumer, and society topics.
-- Toutiao article bodies must stay under 1000 Chinese characters regardless of article type. Compress by reducing background, limiting headings, keeping only the strongest verified facts, and cutting generic conclusions; do not exceed the cap to preserve a fuller source summary.
-- Entertainment articles default to an `entertainment` / `gossip_quick_commentary` profile: lively, gossip-aware, skeptical, and readable. Expand only when the user asks for deeper analysis or the source pack has a verified timeline requiring more context.
-- Society/general news should avoid becoming `社会综合` by default. For social livelihood requests, frame the article as ordinary people's rights, responsibilities, costs, choices, and risk avoidance, with emotional resonance but no empty preaching.
-- Toutiao prioritizes fast context, broad-reader readability, clear conflict, and interactive endings.
-- Toutiao social livelihood writing should optimize the first recommendation batch: the title must make the click reason visible, the first 100 Chinese characters must explain what happened and why it matters, the middle should keep readers moving with short paragraphs and concrete stakes, and the ending should invite comments from people with similar experience.
-- Baijiahao prioritizes search-friendly structure, descriptive headings, background, timeline, and explanatory value.
-- Xiaohongshu prioritizes native note rhythm, short paragraphs, personal observation, practical takeaways, and tags.
-- Zhihu prioritizes a clear judgment or question, structured reasoning, causes, tradeoffs, uncertainty, and conclusion.
+- 起草平台化内容前必须读取 `references/platform-style.md`。它是平台 x 文章类型矩阵的权威来源。
+- 默认语气级别：抓眼但合规。有来源支持时使用冲突、对比、悬念、公众反应和时间线钩子；不要用编造事实或暗示未核实罪责的标题党。
+- 生成 `title` 和 `titleOptions` 时，每个标题不超过 30 个中文字符；具体标题模式、结尾方式和平台语气都以 `references/platform-style.md` 为准。
 
-### Proven Toutiao Natural Commentary Pattern
+### 今日头条体裁定位
 
-Use this pattern for Toutiao society, creator-economy, consumer, and broad-interest hotspot commentary when the topic supports a human judgment rather than a dry explainer.
+- 今日头条 `article`，尤其热点评论类和社会民生类长文章，要按垂直赛道深耕处理：聚焦稳定领域、沉淀账号标签、用更完整的事实链和观点结构支撑 1000-1200 字正文。
+- 今日头条 `microtoutiao` 不强制聚焦单一垂直领域，更像“头条版朋友圈”。适配“短平快、强社交、高互动”调性，可灵活写热点、情感、生活感悟、日常、干货和轻量观点，重点是即时表达、开头抓人和评论区互动。
+- 今日头条 `microtoutiao` 必须根据文章内容提取关键词和话题，生成 2-5 个话题标签，并以 `#话题` 形式追加到正文末尾。话题必须来自正文实际承载的实体、事件、平台、风险点、读者场景或核心观点，例如 `#520红包`、`#转账风险`、`#反诈提醒`；不要先定话题再反推正文，不要编造正文没有出现或没有支撑的热词，不要堆砌无关大词。
+- 今日头条 `microtoutiao` 发布格式：正文推荐 200-800 个中文字符；使用短段落，每段 1-3 句；多用具体数字、短句和少量自然 emoji 提升手机阅读舒适度。避免太短导致信息量不足，也避免太长拉低完读率。
+- 今日头条 `microtoutiao` 爆款结构：开头 50 字内抛出悬念、冲突、数字或反差；中段 200-400 字讲故事、带细节、可加入真实对话或转折；结尾约 30 字给出贴合正文的提问或互动引导，避免机械重复“你怎么看”。
+- 今日头条 `microtoutiao` 配图规则：配 1-3 张高清相关图，优先真实来源图、公开截图、场景图或产品图；图文微头条优先于纯文字。图片必须和正文关键词、事件或读者场景直接相关，不要为了凑图使用广告图、无关配图或空洞插画。
+- 今日头条 `microtoutiao` 领域选择：新手优先家庭日常、婆媳育儿、职场趣事、省钱技巧、生活常识、情感故事和真实经历；这些方向更容易产生共鸣、评论、转发或完读。避开搬运、低俗、敏感和 AI 低质批量文，这类内容容易无收益或被限流。
+- 微头条的灵活性不等于完全无定位。避免长期杂乱无章地跨太多无关领域，否则平台算法难以识别受众，推荐量、粉丝粘性、账号权重和收益稳定性都会受影响。
+- 新手写微头条可先灵活测试多领域，优先尝试热点、情感等流量较大的内容；账号稳定后建议采用“80% 垂直 + 20% 拓展”的内容结构，主做 1-2 个核心领域，少量穿插衍生内容。
+- 当 `toutiaoContentForm` 是 `microtoutiao` 时，不要套用长文章的垂直深耕要求；当 `toutiaoContentForm` 是 `article` 时，不要用微头条的随手分享逻辑替代赛道定位、事实链和结构化论证。
 
-- Open fast with a concrete sentence that names the core event and emotion in plain words; avoid slow background setup.
-- Use only a few verified facts: time, person/entity, public action, cited source, and one or two concrete details. Do not pile up source summaries.
-- Let the article sound like a real editor thinking aloud: short paragraphs, direct judgments, and everyday phrases such as `真实情况常常反过来` or `这不是敬业，是损耗` when supported by the facts.
-- Build the body as event -> phenomenon -> ordinary-reader relevance -> author judgment -> comment question. Keep headings clear, but avoid classroom structures such as `第一、第二、第三` unless the user asks for a checklist.
-- Keep emotion restrained but present. Do not sensationalize illness, private life, tragedy, or unverified motives; move the point toward ordinary people, work rhythm, consumption decisions, or public responsibility.
-- End with a discussion question close to the reader's situation instead of a grand slogan.
-- Before saving, run an explicit de-AI rewrite pass that removes template transitions, numbered lecture structure, over-balanced phrasing, generic moralizing, and stiff summary paragraphs.
-- If a Toutiao finance or consumer article still feels AI-like after the first pass, rewrite it toward a first-person editorial voice: use concrete scene details, fewer classroom headings, short judgment sentences, reader-accounting language, and avoid neat three-part explanations unless the article genuinely needs them.
+## 风格档案笔记
 
-### Toutiao Social Livelihood Recommendation Rules
+在工作笔记中保留精简风格档案并传给 `humanizer-zh`。除非用户明确要求审计元数据，否则不要保存到后端。档案应包含：
 
-Use these distilled rules when the user asks for Toutiao society, social livelihood, ordinary rights, or民生新闻. Do not embed the source article or its irrelevant platform history; keep only these reusable recommendation constraints.
+- `platform`：`toutiao`、`baijiahao`、`xiaohongshu` 或 `zhihu`
+- `toutiaoContentForm`：仅今日头条必填，`microtoutiao` 或 `article`
+- `category`：如 `entertainment`、`society`、`tech_finance`、`knowledge` 或 `general`
+- `articleType`：简短文章类型键，如 `gossip_quick_commentary`、`hotspot_commentary`、`plain_explainer` 或 `question_answer_explainer`
+- `toneLevel`：默认 `eye-catching-but-compliant`，除非用户要求其他语气
+- `platformVoice`：选定平台基线的简短描述
+- `typeVoice`：文章类型层的简短描述
+- `titleStrategy`：本篇采用的具体标题策略
+- `riskNotes`：草稿和 `humanizer-zh` 必须保留的法律、事实、来源或平台风险边界
 
-- Direction: write `社会民生实用评论`, not broad social miscellany. Stable lanes are民生纠纷, 劳动职场, 家庭养老, and social hotspot复盘 with ordinary-reader rules or risks.
-- Selection filter: keep topics with broad everyday relevance, visible conflict, reliable public sources, usable images, and follow-up value. Drop topics that are too cold, too niche, too sensitive, already oversupplied, or hard to verify.
-- Differentiation: if mainstream media already covers the same event, change the angle to responsibility boundary, ordinary-person cost, procedure reminder, or risk avoidance.
-- Title and opening: put the strongest concrete hook in the first 12-18 Chinese characters; use the first 100 Chinese characters to answer `发生了什么` and `和普通人有什么关系`.
-- Body and retention: keep Toutiao bodies under 1000 Chinese characters, with 3-5 short sections at most. Each section should add a new fact, contradiction, affected group, rule boundary, or practical consequence.
-- Interaction and publish check: end with a concrete comment question tied to work, property, consumption, eldercare, schooling, medical care, or family responsibility. Before saving, verify title/body/cover are not generic duplicates and sensitive claims are attributed and restrained.
+## 必需输出
 
-## Style Profile Notes
+始终生成：
 
-Keep a compact style profile in working notes and pass it to `humanizer-zh`. Do not save it to the backend unless the user explicitly asks for auditing metadata. The profile should include:
-
-- `platform`: one of `toutiao`, `baijiahao`, `xiaohongshu`, `zhihu`
-- `category`: selected category such as `entertainment`, `society`, `tech_finance`, `knowledge`, or `general`
-- `articleType`: concise article-type key such as `gossip_quick_commentary`, `hotspot_commentary`, `plain_explainer`, or `question_answer_explainer`
-- `toneLevel`: default `eye-catching-but-compliant` unless the user asks for a different tone
-- `platformVoice`: short description of the selected platform baseline
-- `typeVoice`: short description of the selected article-type layer
-- `titleStrategy`: concrete title strategy used for the article
-- `riskNotes`: legal, factual, source, or platform-risk boundaries that the draft and humanizer must preserve
-
-## Required Output
-
-Always generate:
-
-- one selected `title` no more than 30 Chinese characters
-- multiple `titleOptions`, each no more than 30 Chinese characters
+- 一个不超过 30 个中文字符的选定 `title`
+- 多个 `titleOptions`，每个不超过 30 个中文字符
 - `summary`
 - Markdown `markdownContent`
 - `coverImageUrl`
-- a compact working-note source list for factual audit, not for backend storage
-- a compact working-note style profile, not for backend storage
+- 精简的工作笔记信源列表，用于事实审计，不用于后端存储
+- 精简的工作笔记风格档案，不用于后端存储
 
-Only save after the `humanizer-zh` rewrite pass is complete. If `humanizer-zh` is unavailable, stop before saving and tell the user to install it instead of silently skipping the de-AI pass. Never send process metadata such as `humanizeStatus`, `status`, `publishStatus`, `publishPayload`, model names, prompt versions, full source packs, or style profiles to `POST /api/v1/skill-articles`.
+当用户只要小红书笔记文案且没有要求保存到后端时，只返回：
 
-## Image Handling
+- `*标题*`
+- `*正文*`
+- `*📸首图建议*`
+- `*爆款词*`
 
-Follow `references/image-policy.md`.
+保存载荷只包含 auto-article API 允许字段。不要把 `humanizeStatus`、`status`、`publishStatus`、`publishPayload`、模型名、提示词版本、完整信源包或风格档案等过程元数据发送到 `POST /api/v1/skill-articles`。
 
-Default output requires one cover image and 1-2 inline images. Prefer downloaded local copies of source-article images. If source images are imperfect but usable, still download and insert them, and let the user replace them later. If source images are missing or fail to download, search the internet for images that match the article keywords and select editorially relevant results before using AI generation. Generate concrete raster AI images (`png`, `jpg`, or `webp`) only when both earlier paths fail, never SVG placeholders.
+## 图片处理
 
-### Proven Toutiao Hotspot Image Pattern
+遵循 `references/image-policy.md`。
 
-Use this pattern for Toutiao hotspot commentary when source material contains public screenshots, declarations, account pages, comment sections, event photos, or product visuals.
+默认输出需要 1 张封面图和 1-2 张正文图。优先使用已下载的来源文章图片本地副本。如果来源图片不完美但可用，也要下载并插入，留给用户之后替换。如果来源图片缺失或下载失败，先搜索与文章关键词匹配的互联网图片并选择编辑相关结果，再使用 AI 生成。只有前两条路径都失败时，才生成具体栅格 AI 图片（`png`、`jpg` 或 `webp`），绝不使用 SVG 占位图。
 
-- Prefer real source-article images over polished generic illustrations. A relevant screenshot with platform UI is usually better than a clean but empty stock-style image.
-- Make the cover image immediately identify the event: account screenshot, public statement, long-post title, scene photo, product poster, or official product image.
-- Match inline images to article rhythm: first image shows what happened, second shows the key statement or evidence, third shows public reaction, product detail, or useful context.
-- Keep 3 images as the default for short Toutiao commentary: 1 cover plus 2 inline images. Add more only when the article length and evidence genuinely need them.
-- Avoid unrelated decorative images such as generic phones, keyboards, office desks, backs of people, city night scenes, or abstract AI art when a concrete source image exists.
-- For personal, health, dispute, and legal-risk topics, only use images from public reports or public account material. Do not generate fake scenes, illness visuals, paparazzi-style images, or privacy-invasive pictures.
-- After downloading, inspect candidate images and reject QR codes, logos, avatars-only images, tracking assets, and unrelated recommendation graphics even if the download script accepted them.
+### 今日头条热点图片模式
 
-Before doing slow image work, estimate the effort. If the workflow needs many downloads, manual source-page inspection, image conversion, or AI generation, tell the user that image handling may take significant time and ask whether to continue. If the user asks to skip images, do not save the article to the backend because image-free saves are forbidden by this skill.
+来源材料包含公开视频截图、声明、账号页面、评论区、事件照片或产品视觉时，今日头条热点评论使用此模式。
 
-## Humanizer Dependency
+- 优先真实来源文章图片，而不是精致但泛化的插画。带平台界面的相关截图通常比干净但空洞的图库图更好。
+- 封面图要让事件一眼可识别：账号截图、公开声明、长文标题、现场照片、产品海报或官方产品图。
+- 正文图匹配文章节奏：第一张展示发生了什么，第二张展示关键声明或证据，第三张展示公众反应、产品细节或有用背景。
+- 短今日头条评论默认 3 张图：1 张封面加 2 张正文图。只有文章长度和证据确实需要时才增加。
+- 当存在具体来源图时，避免无关装饰图，如泛化手机、键盘、办公桌、背影、城市夜景或抽象 AI 图。
+- 个人、健康、纠纷和法律风险主题，只使用公开报道或公开账号材料中的图片。不要生成虚假场景、疾病画面、偷拍感图片或侵犯隐私的图片。
+- 下载后检查候选图片，拒绝二维码、标志、纯头像、追踪素材和无关推荐图，即使下载脚本接受了它们。
 
-Before drafting final payloads, verify that `humanizer-zh` is available. If it is missing, automatically use the skill discovery/installation flow to find and install it. If installation succeeds but the active session cannot load it until Codex restarts, tell the user to restart Codex and stop before saving. Never emulate `humanizer-zh` with ad hoc rewriting when the skill is required but unavailable.
+慢图片工作开始前，估算工作量。如果流程需要大量下载、人工检查来源页、图片转换或 AI 生成，告诉用户图片处理可能花较长时间并询问是否继续。如果用户要求跳过图片，不要保存到后端，因为本技能禁止保存无图文章。
 
-## Saving
+## 去 AI 依赖
 
-Use the auto-article HTTP API contract in `references/auto-article-api.md`. The skill must stay portable: never require direct MySQL credentials, never hard-code secrets, and read the backend base URL from user input or environment.
+起草最终载荷前，确认 `humanizer-zh` 可用。如果缺失，自动使用技能发现/安装流程查找并安装。如果安装成功但当前会话要重启 Codex 才能加载，告诉用户重启 Codex 并在保存前停止。需要 `humanizer-zh` 时，不要用临时改写来冒充它。
 
-### Fast Save Protocol
+## 保存
 
-Treat saving as a fixed terminal API call, not as a code-discovery task:
+使用 `references/auto-article-api.md` 中的 auto-article HTTP API 合约。技能必须保持可移植：不要要求直接 MySQL 凭据，不要硬编码密钥，从用户输入或环境变量读取后端基准 URL。
 
-1. Build one JSON payload object with only the fields allowed by `references/auto-article-api.md`.
-2. Prefer passing the constructed JSON to the bundled scripts through stdin by using `-` as the payload argument. This avoids creating `payload.json` at all.
-3. Validate the payload with `scripts/validate_skill_article_payload.py`; this also checks that `coverImageUrl` and Markdown image URLs point to real downloaded local files.
-4. Save with the bundled script:
+### 快速保存协议
+
+把保存视为固定终端 API 调用，不要当成代码探索任务：
+
+1. 只用 `references/auto-article-api.md` 允许的字段构造一个 JSON 载荷对象。
+2. 优先把构造好的 JSON 通过标准输入传给捆绑脚本，并用 `-` 作为载荷参数。这样完全不需要创建 `payload.json`。
+3. 用 `scripts/validate_skill_article_payload.py` 校验载荷；它还会检查 `coverImageUrl` 和 Markdown 图片 URL 是否指向真实下载的本地文件。
+4. 用捆绑脚本保存：
 
 ```sh
 python <skill-dir>/scripts/save_skill_article.py -
 ```
 
-When working inside this repository, prefer the repository-level one-click entrypoint, which delegates to the bundled script and keeps validation centralized:
+在本仓库内工作时，优先使用仓库级一键入口。它会委托给捆绑脚本，并保持校验集中：
 
 ```powershell
-.\scripts\save-skill-article.ps1 payload.json -DryRun
-.\scripts\save-skill-article.ps1 payload.json -BaseUrl http://localhost:9001
+.\scripts\save-skill-article.ps1 C:\tmp\auto-media-writer\<task-id>.payload.json -DryRun
+.\scripts\save-skill-article.ps1 C:\tmp\auto-media-writer\<task-id>.payload.json -BaseUrl http://localhost:9001
 ```
 
 ```sh
-make validateSkillArticle PAYLOAD=/tmp/auto-media-writer/payload.json
-make saveSkillArticle PAYLOAD=/tmp/auto-media-writer/payload.json BASE_URL=http://localhost:9001
+make validateSkillArticle PAYLOAD=/tmp/auto-media-writer/<task-id>.payload.json
+make saveSkillArticle PAYLOAD=/tmp/auto-media-writer/<task-id>.payload.json BASE_URL=http://localhost:9001
 ```
 
-If shell/stdin handling is impractical, use a temporary payload file outside the repository, for example `C:\tmp\auto-media-writer\<task-id>.payload.json` on Windows or `/tmp/auto-media-writer/<task-id>.payload.json` on Unix-like systems. Do not create or leave `payload.json`, `payload_draft.json`, or similar temporary article files in the project root or skill directory. After a successful save or dry-run validation, remove the temporary payload file unless the user explicitly asks to keep it for audit.
+如果 shell 或标准输入处理不方便，使用仓库外的临时载荷文件，例如 Windows 的 `C:\tmp\auto-media-writer\<task-id>.payload.json` 或 Unix 类系统的 `/tmp/auto-media-writer/<task-id>.payload.json`。不要在项目根目录或技能目录创建或留下任何临时载荷文件。保存成功或试运行校验后删除，除非用户明确要求保留用于审计。
 
-Resolve the backend base URL before saving. Prefer `AUTO_ARTICLE_BASE_URL` or the user's explicit deployment URL. Use `--base-url http://localhost:9001` only for local development, not as an assumption for deployed environments. Use `--dry-run` to validate and preview the target URL without sending the request.
+保存前确定后端基准 URL。优先使用 `AUTO_ARTICLE_BASE_URL` 或用户明确给出的部署 URL。`--base-url http://localhost:9001` 只用于本地开发，不要假设部署环境也是本地。使用 `--dry-run` 校验并预览目标 URL，不发送请求。
 
-Use `--static-root backend/static/article-images/uploads` only when running outside the repository root and automatic image-path discovery cannot find the uploads directory.
+本地后端接口请求必须绕过代理：当后端基准 URL 是 `localhost`、`127.0.0.1`、`::1` 或明确的本机开发地址时，优先使用 `http://127.0.0.1:<port>`。如果保存或接口探测返回 `502 Bad Gateway`、代理连接错误，或环境变量存在 `http_proxy`、`https_proxy`、`all_proxy` 指向本机代理（如 `127.0.0.1:7890`），只在本次保存命令进程内临时清空这些代理变量，并设置 `no_proxy=localhost,127.0.0.1,::1` 后重试。不要全局修改用户代理配置；远程部署 URL 仍按用户提供的基准 URL 请求。
 
-If the bundled script is unavailable, validate first and then send the exact HTTP request documented in `references/auto-article-api.md`. Do not create a new save script unless the bundled script itself is broken and must be repaired.
+只有在仓库根目录外运行且自动图片路径发现找不到上传目录时，才使用 `--static-root backend/static/article-images/uploads`。
 
-Hard stops during saving:
+如果捆绑脚本不可用，先校验，再发送 `references/auto-article-api.md` 中记录的精确 HTTP 请求。除非捆绑脚本本身坏了且必须修复，否则不要创建新保存脚本。
 
-- Do not read backend DAO, model, service, router, generated GORM, or `.pb.go` files to infer database behavior.
-- Do not connect to MySQL, require database credentials, or write SQL.
-- Do not write temporary Python scripts for database insertion.
-- Do not send source packs, style profiles, model metadata, process state, or publishing state to the API.
-- Do not insert `/static/article-images/uploads/...` paths unless they came from a download script, AI image generation output saved to disk, or the upload-image API response and the local file exists.
+保存硬性停止条件：
 
-For installing TianAPI MCP in another agent, use the copy-paste templates in `references/setup.md`.
+- 不要读取后端 DAO、model、service、router、生成 GORM 或 `.pb.go` 文件来推断数据库行为。
+- 不要连接 MySQL、要求数据库凭据或写 SQL。
+- 不要编写临时 Python 脚本插入数据库。
+- 不要把信源包、风格档案、模型元数据、过程状态或发布状态发送给 API。
 
-## Evolution
+在另一个代理中安装 TianAPI MCP 时，使用 `references/setup.md` 中的复制模板。
 
-When the user says the result is too stiff, too generic, too long, wrong platform tone, weak title, poor image choice, or otherwise not right, update the relevant style, image, API, or workflow guidance in this skill. Keep changes concise and reusable.
+## 演进
 
+当用户反馈结果太僵硬、太泛、太长、平台语气不对、标题弱、图片选择差或其他不合适时，更新本技能中对应的风格、图片、API 或流程说明。改动要简洁且可复用。
